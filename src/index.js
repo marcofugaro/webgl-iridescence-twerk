@@ -1,6 +1,7 @@
+import State from 'controls-state'
 import WebGLApp from './lib/WebGLApp'
 import assets from './lib/AssetManager'
-import { Ephebe, addNaturalLight } from './scene/Ephebe'
+import { Ephebe } from './scene/Ephebe'
 
 window.DEBUG = window.location.search.includes('debug')
 
@@ -13,6 +14,24 @@ const webgl = new WebGLApp({
   // set the scene background color
   background: '#ccc',
   backgroundAlpha: 1,
+  controls: {
+    powerFactor: State.Slider(1, {
+      min: 0.01,
+      max: 5,
+      step: 0.01,
+    }),
+    speed: State.Slider(0.1, {
+      min: 0.01,
+      max: 10,
+      step: 0.01,
+    }),
+    multiplicator: State.Slider(1, {
+      min: 0.01,
+      max: 20,
+      step: 0.01,
+    }),
+  },
+  hideControls: !window.DEBUG,
   // show the fps counter from stats.js
   showFps: window.DEBUG,
   orbitControls: { distance: 5 },
@@ -39,9 +58,6 @@ assets.load({ renderer: webgl.renderer }).then(() => {
   // use them from other components easily
   webgl.scene.ephebe = new Ephebe({ webgl })
   webgl.scene.add(webgl.scene.ephebe)
-
-  // lights and other scene related stuff
-  addNaturalLight(webgl)
 
   // start animation loop
   webgl.start()

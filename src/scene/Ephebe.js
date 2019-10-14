@@ -1,5 +1,7 @@
 import * as THREE from 'three'
 import assets from '../lib/AssetManager'
+import iridescenceVert from './shaders/iridescence.vert'
+import iridescenceFrag from './shaders/iridescence.frag'
 
 const suzanneKey = assets.queue({
   url: 'assets/ephebe.glb',
@@ -14,15 +16,20 @@ export class Ephebe extends THREE.Group {
     const gltf = assets.get(suzanneKey)
     const ephebe = gltf.scene.clone()
 
-    const material = new THREE.MeshStandardMaterial({
-      metalness: 1,
-      roughness: 0,
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0.0 },
+        powerFactor: { value: this.webgl.controls.powerFactor },
+        speed: { value: this.webgl.controls.speed },
+        multiplicator: { value: this.webgl.controls.multiplicator },
+      },
+      vertexShader: iridescenceVert,
+      fragmentShader: iridescenceFrag,
     })
 
     // apply the material to the model
     ephebe.traverse(child => {
       if (child.isMesh) {
-        console.log(material)
         child.material = material
       }
     })
@@ -34,34 +41,15 @@ export class Ephebe extends THREE.Group {
   }
 
   update(dt, time) {
-    this.rotation.y += dt * 0.1
+    // this.rotation.y += dt * 0.1
+
+    this.traverse(child => {
+      if (child.isMesh) {
+        child.material.uniforms.time.value = time
+        child.material.uniforms.powerFactor.value = this.webgl.controls.powerFactor
+        child.material.uniforms.speed.value = this.webgl.controls.speed
+        child.material.uniforms.multiplicator.value = this.webgl.controls.multiplicator
+      }
+    })
   }
-}
-
-// natural hemisphere light from
-// https://threejs.org/examples/#webgl_lights_hemisphere
-export function addNaturalLight(webgl) {
-  const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.9)
-  // hemiLight.color.setHSL(0.6, 1, 0.6)
-  // hemiLight.groundColor.setHSL(0.095, 1, 0.75)
-  hemiLight.position.set(0, 50, 0)
-  webgl.scene.add(hemiLight)
-
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1)
-  // dirLight.color.setHSL(0.1, 1, 0.95)
-  dirLight.position.set(3, 5, 1)
-  dirLight.position.multiplyScalar(50)
-  webgl.scene.add(dirLight)
-
-  dirLight.castShadow = true
-  dirLight.shadow.mapSize.width = 2048
-  dirLight.shadow.mapSize.height = 2048
-
-  var d = 50
-  dirLight.shadow.camera.left = -d
-  dirLight.shadow.camera.right = d
-  dirLight.shadow.camera.top = d
-  dirLight.shadow.camera.bottom = -d
-  dirLight.shadow.camera.far = 3500
-  dirLight.shadow.bias = -0.0001
 }
