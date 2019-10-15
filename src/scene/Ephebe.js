@@ -14,9 +14,15 @@ export class Ephebe extends THREE.Group {
     this.webgl = webgl
 
     const gltf = assets.get(suzanneKey)
-    const ephebe = gltf.scene.clone()
+    const scene = gltf.scene.clone()
+    this.add(scene)
+    scene.traverse(child => {
+      if (child.isMesh) {
+        this.ephebe = child
+      }
+    })
 
-    const material = new THREE.ShaderMaterial({
+    this.ephebe.material = new THREE.ShaderMaterial({
       uniforms: {
         time: { value: 0.0 },
         powerFactor: { value: this.webgl.controls.powerFactor },
@@ -27,29 +33,15 @@ export class Ephebe extends THREE.Group {
       fragmentShader: iridescenceFrag,
     })
 
-    // apply the material to the model
-    ephebe.traverse(child => {
-      if (child.isMesh) {
-        child.material = material
-      }
-    })
-
-    ephebe.scale.multiplyScalar(0.2)
-    ephebe.position.y = -1
-
-    this.add(ephebe)
+    this.ephebe.scale.multiplyScalar(0.2)
   }
 
   update(dt, time) {
     // this.rotation.y += dt * 0.1
 
-    this.traverse(child => {
-      if (child.isMesh) {
-        child.material.uniforms.time.value = time
-        child.material.uniforms.powerFactor.value = this.webgl.controls.powerFactor
-        child.material.uniforms.speed.value = this.webgl.controls.speed
-        child.material.uniforms.multiplicator.value = this.webgl.controls.multiplicator
-      }
-    })
+    this.ephebe.material.uniforms.time.value = time
+    this.ephebe.material.uniforms.powerFactor.value = this.webgl.controls.powerFactor
+    this.ephebe.material.uniforms.speed.value = this.webgl.controls.speed
+    this.ephebe.material.uniforms.multiplicator.value = this.webgl.controls.multiplicator
   }
 }

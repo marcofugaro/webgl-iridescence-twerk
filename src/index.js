@@ -2,6 +2,8 @@ import State from 'controls-state'
 import WebGLApp from './lib/WebGLApp'
 import assets from './lib/AssetManager'
 import { Ephebe } from './scene/Ephebe'
+import { SoftShadowFloor } from './scene/SoftShadowFloor'
+import { BACKGROUND_COLOR } from './constants'
 
 window.DEBUG = window.location.search.includes('debug')
 
@@ -11,9 +13,7 @@ const canvas = document.querySelector('#app')
 // setup the WebGLRenderer
 const webgl = new WebGLApp({
   canvas,
-  // set the scene background color
-  background: '#ccc',
-  backgroundAlpha: 1,
+  background: BACKGROUND_COLOR,
   controls: {
     powerFactor: State.Slider(1, {
       min: 0.01,
@@ -32,7 +32,6 @@ const webgl = new WebGLApp({
     }),
   },
   hideControls: !window.DEBUG,
-  // show the fps counter from stats.js
   showFps: window.DEBUG,
   orbitControls: { distance: 5 },
 })
@@ -58,6 +57,13 @@ assets.load({ renderer: webgl.renderer }).then(() => {
   // use them from other components easily
   webgl.scene.ephebe = new Ephebe({ webgl })
   webgl.scene.add(webgl.scene.ephebe)
+  webgl.scene.softShadowFloor = new SoftShadowFloor({ webgl })
+  webgl.scene.add(webgl.scene.softShadowFloor)
+
+  // TODO gamma??
+  webgl.renderer.gammaOuput = true
+  // localClipping is needed for the SoftShadowFloor
+  webgl.renderer.localClippingEnabled = true
 
   // start animation loop
   webgl.start()
