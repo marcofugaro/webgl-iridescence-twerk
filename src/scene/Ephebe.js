@@ -28,6 +28,9 @@ export class Ephebe extends THREE.Group {
         powerFactor: { value: this.webgl.controls.powerFactor },
         speed: { value: this.webgl.controls.speed },
         multiplicator: { value: this.webgl.controls.multiplicator },
+        firstColor: { type: 'c', value: new THREE.Color(this.webgl.controls.firstColor) },
+        secondColor: { type: 'c', value: new THREE.Color(this.webgl.controls.secondColor) },
+        showAllColors: { value: Number(this.webgl.controls.showAllColors) },
       },
       vertexShader: iridescenceVert,
       fragmentShader: iridescenceFrag,
@@ -43,5 +46,10 @@ export class Ephebe extends THREE.Group {
     this.ephebe.material.uniforms.powerFactor.value = this.webgl.controls.powerFactor
     this.ephebe.material.uniforms.speed.value = this.webgl.controls.speed
     this.ephebe.material.uniforms.multiplicator.value = this.webgl.controls.multiplicator
+    this.ephebe.material.uniforms.firstColor.value = new THREE.Color(this.webgl.controls.firstColor)
+    this.ephebe.material.uniforms.secondColor.value = new THREE.Color(
+      this.webgl.controls.secondColor
+    )
+    this.ephebe.material.uniforms.showAllColors.value = Number(this.webgl.controls.showAllColors)
   }
 }

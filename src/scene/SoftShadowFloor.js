@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { HorizontalBlurShader } from 'three/examples/jsm/shaders/HorizontalBlurShader'
 import { VerticalBlurShader } from 'three/examples/jsm/shaders/VerticalBlurShader'
-import { PLANE_WIDTH, BACKGROUND_COLOR } from '../constants'
+import { PLANE_WIDTH } from '../constants'
 
 // taken directly from
 // https://twitter.com/mrdoob/status/1104209387738980352
@@ -35,7 +35,7 @@ export class SoftShadowFloor extends THREE.Group {
       PLANE_WIDTH / 2,
       -PLANE_WIDTH / 2,
       0,
-      1
+      PLANE_WIDTH
     )
     this.shadowCamera.rotation.x = Math.PI / 2
     this.add(this.shadowCamera)
@@ -50,7 +50,10 @@ export class SoftShadowFloor extends THREE.Group {
     this.depthMaterial.depthWrite = false
     this.depthMaterial.side = THREE.FrontSide
 
-    this.depthBackground = new THREE.Color(BACKGROUND_COLOR)
+    this.depthBackground = new THREE.Color(this.webgl.controls.background)
+    this.webgl.controls.$onChanges(() => {
+      this.depthBackground = new THREE.Color(this.webgl.controls.background)
+    })
 
     this.blurCamera = new THREE.OrthographicCamera(
       -PLANE_WIDTH / 2,
@@ -58,7 +61,7 @@ export class SoftShadowFloor extends THREE.Group {
       PLANE_WIDTH / 2,
       -PLANE_WIDTH / 2,
       0,
-      1
+      PLANE_WIDTH
     )
     this.blurCamera.rotation.x = Math.PI / 2
 

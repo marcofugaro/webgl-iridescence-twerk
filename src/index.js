@@ -3,7 +3,6 @@ import WebGLApp from './lib/WebGLApp'
 import assets from './lib/AssetManager'
 import { Ephebe } from './scene/Ephebe'
 import { SoftShadowFloor } from './scene/SoftShadowFloor'
-import { BACKGROUND_COLOR } from './constants'
 
 window.DEBUG = window.location.search.includes('debug')
 
@@ -13,14 +12,13 @@ const canvas = document.querySelector('#app')
 // setup the WebGLRenderer
 const webgl = new WebGLApp({
   canvas,
-  background: BACKGROUND_COLOR,
   controls: {
     powerFactor: State.Slider(1, {
       min: 0.01,
       max: 5,
       step: 0.01,
     }),
-    speed: State.Slider(0.1, {
+    speed: State.Slider(0.3, {
       min: 0.01,
       max: 10,
       step: 0.01,
@@ -30,10 +28,14 @@ const webgl = new WebGLApp({
       max: 20,
       step: 0.01,
     }),
+    background: '#ffffff',
+    firstColor: '#fdd800',
+    secondColor: '#5223ff',
+    showAllColors: false,
   },
   hideControls: !window.DEBUG,
   showFps: window.DEBUG,
-  orbitControls: { distance: 5 },
+  orbitControls: { distance: 5, target: [0, 1, 0] },
 })
 
 // attach it to the window to inspect in the console
@@ -48,9 +50,6 @@ webgl.canvas.style.visibility = 'hidden'
 assets.load({ renderer: webgl.renderer }).then(() => {
   // show canvas
   webgl.canvas.style.visibility = ''
-
-  // move the camera behind
-  webgl.camera.position.set(0, 0, 5)
 
   // add any "WebGL components" here...
   // append them to the scene so you can
