@@ -13,7 +13,10 @@ varying vec3 vPosition;
 
 
 void main() {
-  vec3 cameraDirection = normalize(cameraPosition - vPosition);
+  // The camera sometimes would be too close to the position,
+  // so the vector would point to the negative position.
+  // Multiplicating the camera position by a big number fixes it.
+  vec3 cameraDirection = normalize(cameraPosition * 1000.0 - vPosition);
 
   // TODO make powerFactor static
   float iridescence = pow(dot(vNormal, cameraDirection), powerFactor) * multiplicator;
