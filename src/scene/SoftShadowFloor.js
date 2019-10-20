@@ -1,10 +1,14 @@
 import * as THREE from 'three'
 import { HorizontalBlurShader } from 'three/examples/jsm/shaders/HorizontalBlurShader'
 import { VerticalBlurShader } from 'three/examples/jsm/shaders/VerticalBlurShader'
-import { PLANE_WIDTH } from '../constants'
 
-// taken directly from
+// adapted from
 // https://twitter.com/mrdoob/status/1104209387738980352
+
+const PLANE_WIDTH = 3
+const CAMERA_HEIGHT = PLANE_WIDTH * 0.5
+const BLUR_AMOUNT = 0.3
+const OPACITY_AMOUNT = 0.5
 
 export class SoftShadowFloor extends THREE.Group {
   constructor({ webgl, ...options }) {
@@ -21,8 +25,8 @@ export class SoftShadowFloor extends THREE.Group {
     const material = new THREE.MeshBasicMaterial({
       map: this.renderTarget.texture,
       // dim the shadow here
-      // opacity: 0.3,
-      // transparent: true,
+      opacity: OPACITY_AMOUNT,
+      transparent: true,
     })
 
     this.plane = new THREE.Mesh(geometry, material)
@@ -34,21 +38,22 @@ export class SoftShadowFloor extends THREE.Group {
       PLANE_WIDTH / 2,
       PLANE_WIDTH / 2,
       -PLANE_WIDTH / 2,
-      0,
-      PLANE_WIDTH
+      CAMERA_HEIGHT,
+      0
     )
+
     this.shadowCamera.rotation.x = Math.PI / 2
     this.add(this.shadowCamera)
 
-    // this.add(new THREE.CameraHelper(this.shadowCamera))
+    if (window.DEBUG) {
+      this.add(new THREE.CameraHelper(this.shadowCamera))
+    }
 
-    this.clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0.3)
-
-    this.depthMaterial = new THREE.MeshBasicMaterial()
-    this.depthMaterial.clippingPlanes = [this.clipPlane]
+    this.depthMaterial = new THREE.MeshDepthMaterial()
     this.depthMaterial.depthTest = false
     this.depthMaterial.depthWrite = false
     this.depthMaterial.side = THREE.FrontSide
+    this.depthMaterial.skinning = true
 
     this.depthBackground = new THREE.Color(this.webgl.controls.background)
     this.webgl.controls.$onChanges(() => {
@@ -111,6 +116,7 @@ export class SoftShadowFloor extends THREE.Group {
     this.webgl.scene.background = null
     this.webgl.scene.overrideMaterial = this.depthMaterial
 
+    //  clear all
     this.webgl.renderer.autoClear = false
     this.webgl.renderer.setClearColor(this.depthBackground)
     this.webgl.renderer.setRenderTarget(this.renderTarget2)
@@ -118,15 +124,11 @@ export class SoftShadowFloor extends THREE.Group {
     this.webgl.renderer.setRenderTarget(this.renderTarget)
     this.webgl.renderer.clear()
 
-    const quality = 10
-    for (let i = 0; i < quality; i++) {
-      const j = i / quality
-      this.clipPlane.constant = (1 - j) / 3.0
-      this.depthMaterial.color.setRGB(1 - j, 1 - j, 1 - j)
-      this.webgl.renderer.render(this.webgl.scene, this.shadowCamera)
-      this.blurShadow(j)
-    }
+    // render
+    this.webgl.renderer.render(this.webgl.scene, this.shadowCamera)
+    this.blurShadow(BLUR_AMOUNT)
 
+    // reset
     this.webgl.renderer.setRenderTarget(null)
     this.webgl.renderer.autoClear = true
 

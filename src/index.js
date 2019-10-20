@@ -33,7 +33,6 @@ const webgl = new WebGLApp({
     secondColor: '#5223ff',
     showAllColors: false,
   },
-  hideControls: !window.DEBUG,
   showFps: window.DEBUG,
   orbitControls: { distance: 5, target: [0, 1, 0] },
 })

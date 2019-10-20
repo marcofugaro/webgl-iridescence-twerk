@@ -2,9 +2,10 @@ import * as THREE from 'three'
 import assets from '../lib/AssetManager'
 import iridescenceVert from './shaders/iridescence.vert'
 import iridescenceFrag from './shaders/iridescence.frag'
+import { injectSkinning } from '../lib/three-utils'
 
-const suzanneKey = assets.queue({
-  url: 'assets/ephebe.glb',
+const key = assets.queue({
+  url: 'assets/ephebe_twerking.glb',
   type: 'gltf',
 })
 
@@ -13,14 +14,19 @@ export class Ephebe extends THREE.Group {
     super(options)
     this.webgl = webgl
 
-    const gltf = assets.get(suzanneKey)
-    const scene = gltf.scene.clone()
+    const gltf = assets.get(key)
+    // BUG gltf.scene.clone() doesn't clone .skinning
+    const scene = gltf.scene
     this.add(scene)
     scene.traverse(child => {
       if (child.isMesh) {
         this.ephebe = child
       }
     })
+
+    this.mixer = new THREE.AnimationMixer(scene)
+    const clip = gltf.animations[0].clone()
+    this.mixer.clipAction(clip).play()
 
     this.ephebe.material = new THREE.ShaderMaterial({
       uniforms: {
@@ -32,15 +38,17 @@ export class Ephebe extends THREE.Group {
         secondColor: { type: 'c', value: new THREE.Color(this.webgl.controls.secondColor) },
         showAllColors: { value: Number(this.webgl.controls.showAllColors) },
       },
-      vertexShader: iridescenceVert,
+      vertexShader: injectSkinning(iridescenceVert),
       fragmentShader: iridescenceFrag,
     })
+    this.ephebe.material.skinning = true
 
-    this.ephebe.scale.multiplyScalar(0.2)
+    scene.scale.multiplyScalar(0.2)
   }
 
   update(dt, time) {
     // this.rotation.y += dt * 0.1
+    this.mixer.update(dt)
 
     this.ephebe.material.uniforms.time.value = time
     this.ephebe.material.uniforms.powerFactor.value = this.webgl.controls.powerFactor
