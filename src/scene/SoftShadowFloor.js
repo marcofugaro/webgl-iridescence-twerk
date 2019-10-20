@@ -1,12 +1,14 @@
 import * as THREE from 'three'
 import { HorizontalBlurShader } from 'three/examples/jsm/shaders/HorizontalBlurShader'
 import { VerticalBlurShader } from 'three/examples/jsm/shaders/VerticalBlurShader'
+import depthVert from 'three/src/renderers/shaders/ShaderLib/depth_vert.glsl'
+import depthFrag from 'three/src/renderers/shaders/ShaderLib/depth_frag.glsl'
 
 // adapted from
 // https://twitter.com/mrdoob/status/1104209387738980352
 
 const PLANE_WIDTH = 3
-const CAMERA_HEIGHT = PLANE_WIDTH * 0.5
+const CAMERA_HEIGHT = PLANE_WIDTH * 0.3
 const BLUR_AMOUNT = 0.3
 const OPACITY_AMOUNT = 0.5
 
@@ -49,7 +51,17 @@ export class SoftShadowFloor extends THREE.Group {
       this.add(new THREE.CameraHelper(this.shadowCamera))
     }
 
-    this.depthMaterial = new THREE.MeshDepthMaterial()
+    // like MeshDepthMaterial, but with alpha in place of white
+    this.depthMaterial = new THREE.ShaderMaterial({
+      vertexShader: depthVert,
+      fragmentShader: `#define DEPTH_PACKING 3200
+      `.concat(
+          depthFrag.replace(
+            'gl_FragColor = vec4( vec3( 1.0 - gl_FragCoord.z ), opacity );',
+            `gl_FragColor = vec4(vec3(0.0), 1.0 - gl_FragCoord.z);`
+          )
+        ),
+    })
     this.depthMaterial.depthTest = false
     this.depthMaterial.depthWrite = false
     this.depthMaterial.side = THREE.FrontSide
