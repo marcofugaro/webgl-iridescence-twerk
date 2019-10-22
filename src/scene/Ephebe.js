@@ -1,8 +1,7 @@
 import * as THREE from 'three'
 import assets from '../lib/AssetManager'
-import iridescenceVert from './shaders/iridescence.vert'
 import iridescenceFrag from './shaders/iridescence.frag'
-import { injectSkinning } from '../lib/three-utils'
+import { normalMaterialGlobalvertPos } from '../lib/three-utils'
 
 const key = assets.queue({
   url: 'assets/ephebe_twerking.glb',
@@ -38,7 +37,7 @@ export class Ephebe extends THREE.Group {
         secondColor: { type: 'c', value: new THREE.Color(this.webgl.controls.secondColor) },
         showAllColors: { value: Number(this.webgl.controls.showAllColors) },
       },
-      vertexShader: injectSkinning(iridescenceVert),
+      vertexShader: normalMaterialGlobalvertPos,
       fragmentShader: iridescenceFrag,
     })
     this.ephebe.material.skinning = true
