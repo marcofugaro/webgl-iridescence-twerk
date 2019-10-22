@@ -16,7 +16,6 @@ export class Ephebe extends THREE.Group {
     const gltf = assets.get(key)
     // BUG gltf.scene.clone() doesn't clone .skinning
     const scene = gltf.scene
-    this.add(scene)
     scene.traverse(child => {
       if (child.isMesh) {
         this.ephebe = child
@@ -42,7 +41,11 @@ export class Ephebe extends THREE.Group {
     })
     this.ephebe.material.skinning = true
 
-    scene.scale.multiplyScalar(0.2)
+    scene.scale.multiplyScalar(0.25)
+    scene.rotateY(Math.PI)
+    scene.translateX(-0.1)
+
+    this.add(scene)
   }
 
   update(dt, time) {

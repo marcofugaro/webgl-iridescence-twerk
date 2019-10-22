@@ -8,7 +8,7 @@ import depthFrag from 'three/src/renderers/shaders/ShaderLib/depth_frag.glsl'
 // https://twitter.com/mrdoob/status/1104209387738980352
 
 const PLANE_WIDTH = 3
-const CAMERA_HEIGHT = PLANE_WIDTH * 0.3
+const CAMERA_HEIGHT = PLANE_WIDTH * 0.4
 const BLUR_AMOUNT = 0.3
 const OPACITY_AMOUNT = 0.5
 

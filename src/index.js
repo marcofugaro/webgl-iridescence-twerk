@@ -34,7 +34,13 @@ const webgl = new WebGLApp({
     showAllColors: false,
   },
   showFps: window.DEBUG,
-  orbitControls: { distance: 5, target: [0, 1, 0] },
+  orbitControls: {
+    distance: 5,
+    target: [0, 1.2, 0],
+    phi: Math.PI * 0.4,
+    phiBounds: !window.DEBUG && [0, Math.PI * 0.55],
+    distanceBounds: !window.DEBUG && [5, 5],
+  },
 })
 
 // attach it to the window to inspect in the console
