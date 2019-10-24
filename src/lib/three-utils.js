@@ -6,12 +6,12 @@ const normalMaterialGlobalvert = normalVert.replace(
   '#include <defaultnormal_vertex>',
   THREE.ShaderChunk['defaultnormal_vertex'].replace(
     'transformedNormal = normalMatrix * transformedNormal;',
-    // position correctly the normals
-    'transformedNormal = vec3(transformedNormal.x, -transformedNormal.y, -transformedNormal.z);'
+    // take into consideration only the model matrix
+    'transformedNormal = mat3(modelMatrix) * transformedNormal;'
   )
 )
 
-function injectPositionVaryingInVert(vert) {
+export function injectPositionVaryingInVert(vert) {
   return vert.replace(
     'void main() {',
     `

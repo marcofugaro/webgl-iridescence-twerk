@@ -49,7 +49,6 @@ export class Ephebe extends THREE.Group {
   }
 
   update(dt, time) {
-    // this.rotation.y += dt * 0.1
     this.mixer.update(dt)
 
     this.ephebe.material.uniforms.time.value = time
