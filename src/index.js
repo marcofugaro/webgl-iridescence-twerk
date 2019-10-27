@@ -2,6 +2,7 @@ import State from 'controls-state'
 import WebGLApp from './lib/WebGLApp'
 import assets from './lib/AssetManager'
 import { Ephebe } from './scene/Ephebe'
+import { Waves } from './scene/Waves'
 import { SoftShadowFloor } from './scene/SoftShadowFloor'
 
 window.DEBUG = window.location.search.includes('debug')
@@ -28,9 +29,9 @@ const webgl = new WebGLApp({
       max: 20,
       step: 0.01,
     }),
-    background: '#ffffff',
-    firstColor: '#fdd800',
-    secondColor: '#5223ff',
+    background: '#FFDB00',
+    firstColor: '#EDFD33',
+    secondColor: '#0078DC',
     showAllColors: false,
   },
   showFps: window.DEBUG,
@@ -51,6 +52,9 @@ if (window.DEBUG) {
 // hide canvas
 webgl.canvas.style.visibility = 'hidden'
 
+// close the controls pane
+// TODO
+
 // load any queued assets
 assets.load({ renderer: webgl.renderer }).then(() => {
   // show canvas
@@ -63,6 +67,8 @@ assets.load({ renderer: webgl.renderer }).then(() => {
   webgl.scene.add(webgl.scene.ephebe)
   webgl.scene.softShadowFloor = new SoftShadowFloor({ webgl })
   webgl.scene.add(webgl.scene.softShadowFloor)
+  // webgl.scene.waves = new Waves({ webgl })
+  // webgl.scene.add(webgl.scene.waves)
 
   // TODO gamma??
   webgl.renderer.gammaOuput = true
