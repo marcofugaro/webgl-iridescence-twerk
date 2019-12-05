@@ -56,14 +56,6 @@ export default class WebGLApp {
     this.#lastTime = performance.now()
     this.#rafID = null
 
-    // detect the gpu info
-    const gpu = getGPUTier({ glContext: this.renderer.getContext() })
-    this.gpu = {
-      name: gpu.type,
-      tier: Number(gpu.tier.slice(-1)),
-      isMobile: gpu.tier.toLowerCase().includes('mobile'),
-    }
-
     // handle resize events
     window.addEventListener('resize', this.resize)
     window.addEventListener('orientationchange', this.resize)
@@ -115,6 +107,14 @@ export default class WebGLApp {
     if (options.controls) {
       const controlsState = State(options.controls)
       this.controls = options.hideControls ? controlsState : wrapGUI(controlsState)
+    }
+
+    // detect the gpu info
+    const gpu = getGPUTier({ glContext: this.renderer.getContext() })
+    this.gpu = {
+      name: gpu.type,
+      tier: Number(gpu.tier.slice(-1)),
+      isMobile: gpu.tier.toLowerCase().includes('mobile'),
     }
   }
 

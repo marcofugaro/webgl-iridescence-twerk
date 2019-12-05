@@ -14,24 +14,24 @@ const canvas = document.querySelector('#app')
 const webgl = new WebGLApp({
   canvas,
   controls: {
-    powerFactor: State.Slider(1, {
+    powerFactor: State.Slider(1.13, {
       min: 0.01,
       max: 5,
       step: 0.01,
     }),
-    speed: State.Slider(0.3, {
+    speed: State.Slider(1.47, {
       min: 0.01,
       max: 10,
       step: 0.01,
     }),
-    multiplicator: State.Slider(1, {
+    multiplicator: State.Slider(3, {
       min: 0.01,
       max: 20,
       step: 0.01,
     }),
-    background: '#FFDB00',
-    firstColor: '#EDFD33',
-    secondColor: '#0078DC',
+    background: '#E2E45D',
+    firstColor: '#CE1DC5',
+    secondColor: '#00E6CC',
     showAllColors: false,
   },
   showFps: window.DEBUG,
@@ -70,8 +70,10 @@ assets.load({ renderer: webgl.renderer }).then(() => {
   // webgl.scene.waves = new Waves({ webgl })
   // webgl.scene.add(webgl.scene.waves)
 
-  // TODO gamma??
+  // enable gamma correction
   webgl.renderer.gammaOuput = true
+  webgl.renderer.gammaFactor = 2.2
+
   // localClipping is needed for the SoftShadowFloor
   webgl.renderer.localClippingEnabled = true
 
