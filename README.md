@@ -1,4 +1,4 @@
-# webgl-iridescence-dance
+# webgl-iridescence-twerk
 
 > Some cool ass iridescent effect
 
