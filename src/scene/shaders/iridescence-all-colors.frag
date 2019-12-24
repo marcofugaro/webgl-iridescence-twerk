@@ -4,8 +4,6 @@ uniform float time;
 uniform float powerFactor;
 uniform float multiplicator;
 uniform float speed;
-uniform vec3 firstColor;
-uniform vec3 secondColor;
 
 varying vec3 vNormal;
 varying vec3 vPosition;
@@ -19,13 +17,9 @@ void main() {
 
   float iridescence = pow(dot(vNormal, cameraDirection), powerFactor) * multiplicator;
 
-  // show all colors
+  // circle the hue
   float hue = mod(iridescence + time * speed, 1.0);
-  vec3 rainbowColor = hsl2rgb(hue, 1.0, 0.5);
-
-  // alternate between two colors,
-  // the function looks like this /\/\/\/\/
-  vec3 color = mix(firstColor, secondColor, abs(1.0 - mod(iridescence + time * speed, 2.0)));
+  vec3 color = hsl2rgb(hue, 1.0, 0.5);
 
   gl_FragColor = vec4(color, 1.0);
 }

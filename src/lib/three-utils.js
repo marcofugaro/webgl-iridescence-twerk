@@ -1,8 +1,7 @@
 import * as THREE from 'three'
-import normalVert from 'three/src/renderers/shaders/ShaderLib/normal_vert.glsl'
 
 // like MeshNormalMaterial, but the normals are relative to world not camera
-const normalMaterialGlobalvert = normalVert.replace(
+const normalMaterialGlobalvert = THREE.ShaderChunk['normal_vert'].replace(
   '#include <defaultnormal_vertex>',
   THREE.ShaderChunk['defaultnormal_vertex'].replace(
     'transformedNormal = normalMatrix * transformedNormal;',
@@ -11,15 +10,24 @@ const normalMaterialGlobalvert = normalVert.replace(
   )
 )
 
-export function injectPositionVaryingInVert(vert) {
-  return vert.replace(
+export const normalMaterialGlobalvertPos = monkeyPatch(normalMaterialGlobalvert, {
+  header: 'varying vec3 vPosition;',
+  main: 'vPosition = position;',
+})
+
+export function monkeyPatch(shader, { header = '', main = '', ...replaces }) {
+  let patchedShader = shader
+
+  Object.keys(replaces).forEach(key => {
+    patchedShader = patchedShader.replace(key, replaces[key])
+  })
+
+  return patchedShader.replace(
     'void main() {',
     `
-    varying vec3 vPosition;
+    ${header}
     void main() {
-      vPosition = position;
-  `
+      ${main}
+    `
   )
 }
-
-export const normalMaterialGlobalvertPos = injectPositionVaryingInVert(normalMaterialGlobalvert)

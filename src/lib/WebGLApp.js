@@ -51,6 +51,8 @@ export default class WebGLApp {
 
     this.scene = new THREE.Scene()
 
+    this.gl = this.renderer.getContext()
+
     this.time = 0
     this.isRunning = false
     this.#lastTime = performance.now()
@@ -85,9 +87,13 @@ export default class WebGLApp {
       this.orbitControls = createOrbitControls({
         element: this.canvas,
         parent: window,
-        distance: 4,
+        distance: 5,
         ...(options.orbitControls instanceof Object ? options.orbitControls : {}),
       })
+
+      // move the camera position accordingly to the orbitcontrols options
+      this.camera.position.fromArray(this.orbitControls.position)
+      this.camera.lookAt(new THREE.Vector3().fromArray(this.orbitControls.target))
     }
 
     // Attach the Cannon physics engine
@@ -107,6 +113,14 @@ export default class WebGLApp {
     if (options.controls) {
       const controlsState = State(options.controls)
       this.controls = options.hideControls ? controlsState : wrapGUI(controlsState)
+      if (options.closeControls) {
+        const controlsElement = document.querySelector('[class*="controlPanel"]')
+
+        controlsElement.style.display = 'none'
+        const controlsButton = document.querySelector('[class*="controlPanel"] button')
+        controlsButton.click()
+        controlsElement.style.display = 'block'
+      }
     }
 
     // detect the gpu info

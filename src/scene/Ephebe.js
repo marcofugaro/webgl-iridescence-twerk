@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import assets from '../lib/AssetManager'
-import iridescenceFrag from './shaders/iridescence.frag'
+import iridescenceAllColorsFrag from './shaders/iridescence-all-colors.frag'
 import { normalMaterialGlobalvertPos } from '../lib/three-utils'
 
 const key = assets.queue({
@@ -26,20 +26,31 @@ export class Ephebe extends THREE.Group {
     const clip = gltf.animations[0].clone()
     this.mixer.clipAction(clip).play()
 
+    const { powerFactor, speed, multiplicator } = this.webgl.controls.ephebe
+
     this.ephebe.material = new THREE.ShaderMaterial({
       uniforms: {
         time: { value: 0.0 },
-        powerFactor: { value: this.webgl.controls.powerFactor },
-        speed: { value: this.webgl.controls.speed },
-        multiplicator: { value: this.webgl.controls.multiplicator },
-        firstColor: { type: 'c', value: new THREE.Color(this.webgl.controls.firstColor) },
-        secondColor: { type: 'c', value: new THREE.Color(this.webgl.controls.secondColor) },
-        showAllColors: { value: Number(this.webgl.controls.showAllColors) },
+        powerFactor: { value: powerFactor },
+        speed: { value: speed },
+        multiplicator: { value: multiplicator },
       },
       vertexShader: normalMaterialGlobalvertPos,
-      fragmentShader: iridescenceFrag,
+      fragmentShader: iridescenceAllColorsFrag,
     })
     this.ephebe.material.skinning = true
+
+    this.webgl.controls.$onChanges(controls => {
+      if (controls['ephebe.powerFactor']) {
+        this.ephebe.material.uniforms.powerFactor.value = controls['ephebe.powerFactor'].value
+      }
+      if (controls['ephebe.speed']) {
+        this.ephebe.material.uniforms.speed.value = controls['ephebe.speed'].value
+      }
+      if (controls['ephebe.multiplicator']) {
+        this.ephebe.material.uniforms.multiplicator.value = controls['ephebe.multiplicator'].value
+      }
+    })
 
     scene.scale.multiplyScalar(0.25)
     scene.rotateY(Math.PI)
@@ -52,13 +63,5 @@ export class Ephebe extends THREE.Group {
     this.mixer.update(dt)
 
     this.ephebe.material.uniforms.time.value = time
-    this.ephebe.material.uniforms.powerFactor.value = this.webgl.controls.powerFactor
-    this.ephebe.material.uniforms.speed.value = this.webgl.controls.speed
-    this.ephebe.material.uniforms.multiplicator.value = this.webgl.controls.multiplicator
-    this.ephebe.material.uniforms.firstColor.value = new THREE.Color(this.webgl.controls.firstColor)
-    this.ephebe.material.uniforms.secondColor.value = new THREE.Color(
-      this.webgl.controls.secondColor
-    )
-    this.ephebe.material.uniforms.showAllColors.value = Number(this.webgl.controls.showAllColors)
   }
 }
