@@ -2,7 +2,7 @@ import State from 'controls-state'
 import WebGLApp from './lib/WebGLApp'
 import assets from './lib/AssetManager'
 import { Ephebe } from './scene/Ephebe'
-import { Waves } from './scene/Waves'
+import { Hills } from './scene/Hills'
 
 window.DEBUG = window.location.search.includes('debug')
 
@@ -33,7 +33,7 @@ const webgl = new WebGLApp({
         step: 0.01,
       }),
     },
-    waves: {
+    hills: {
       powerFactor: State.Slider(1.13, {
         min: 0.01,
         max: 5,
@@ -90,8 +90,8 @@ assets.load({ renderer: webgl.renderer }).then(() => {
   // use them from other components easily
   webgl.scene.ephebe = new Ephebe({ webgl })
   webgl.scene.add(webgl.scene.ephebe)
-  webgl.scene.waves = new Waves({ webgl })
-  webgl.scene.add(webgl.scene.waves)
+  webgl.scene.hills = new Hills({ webgl })
+  webgl.scene.add(webgl.scene.hills)
 
   // start animation loop
   webgl.start()

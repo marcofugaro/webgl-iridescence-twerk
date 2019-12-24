@@ -8,12 +8,12 @@ const PLANE_DETAIL = 256
 
 const center = new THREE.Vector2(0, 0)
 
-export class Waves extends THREE.Group {
+export class Hills extends THREE.Group {
   constructor({ webgl, ...options }) {
     super(options)
     this.webgl = webgl
 
-    const { powerFactor, speed, multiplicator, firstColor, secondColor } = this.webgl.controls.waves
+    const { powerFactor, speed, multiplicator, firstColor, secondColor } = this.webgl.controls.hills
 
     this.material = new THREE.ShaderMaterial({
       uniforms: {
@@ -29,23 +29,23 @@ export class Waves extends THREE.Group {
     })
 
     this.webgl.controls.$onChanges(controls => {
-      if (controls['waves.powerFactor']) {
-        this.material.uniforms.powerFactor.value = controls['waves.powerFactor'].value
+      if (controls['hills.powerFactor']) {
+        this.material.uniforms.powerFactor.value = controls['hills.powerFactor'].value
       }
-      if (controls['waves.speed']) {
-        this.material.uniforms.speed.value = controls['waves.speed'].value
+      if (controls['hills.speed']) {
+        this.material.uniforms.speed.value = controls['hills.speed'].value
       }
-      if (controls['waves.multiplicator']) {
-        this.material.uniforms.multiplicator.value = controls['waves.multiplicator'].value
+      if (controls['hills.multiplicator']) {
+        this.material.uniforms.multiplicator.value = controls['hills.multiplicator'].value
       }
-      if (controls['waves.firstColor']) {
+      if (controls['hills.firstColor']) {
         this.material.uniforms.firstColor.value = new THREE.Color(
-          controls['waves.firstColor'].value
+          controls['hills.firstColor'].value
         )
       }
-      if (controls['waves.secondColor']) {
+      if (controls['hills.secondColor']) {
         this.material.uniforms.secondColor.value = new THREE.Color(
-          controls['waves.secondColor'].value
+          controls['hills.secondColor'].value
         )
       }
     })
