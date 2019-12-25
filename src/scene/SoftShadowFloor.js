@@ -7,9 +7,6 @@ import depthFrag from 'three/src/renderers/shaders/ShaderLib/depth_frag.glsl'
 // adapted from
 // https://twitter.com/mrdoob/status/1104209387738980352
 
-// ⚠️ remember to enable localClipping with
-// webgl.renderer.localClippingEnabled = true
-
 const PLANE_WIDTH = 3
 const CAMERA_HEIGHT = PLANE_WIDTH * 0.4
 const BLUR_AMOUNT = 0.3
@@ -19,6 +16,9 @@ export class SoftShadowFloor extends THREE.Group {
   constructor({ webgl, ...options }) {
     super(options)
     this.webgl = webgl
+
+    // enable localClipping
+    this.webgl.renderer.localClippingEnabled = true
 
     this.renderTarget = new THREE.WebGLRenderTarget(512, 512)
     this.renderTarget.texture.generateMipmaps = false

@@ -13,9 +13,7 @@ const canvas = document.querySelector('#app')
 const webgl = new WebGLApp({
   canvas,
   controls: {
-    background: '#DCDBDD', // gray
-    // background: '#CBF6FF', // cyan
-    // background: '#D9B241', // yellow
+    background: '#070758',
     ephebe: {
       powerFactor: State.Slider(0.8, {
         min: 0.01,
