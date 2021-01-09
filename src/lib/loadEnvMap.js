@@ -1,52 +1,50 @@
-// Inspiration for this code goes to Matt DesLauriers @mattdesl,
-// really awesome dude, give him a follow!
-// https://github.com/mattdesl/threejs-app/blob/master/src/util/loadEnvMap.js
 import * as THREE from 'three'
-import clamp from 'lodash/clamp'
+import highestPowerOfTwo from 'highest-power-two'
 import { HDRCubeTextureLoader } from 'three/examples/jsm/loaders/HDRCubeTextureLoader'
-import { PMREMGenerator } from 'three/examples/jsm/pmrem/PMREMGenerator'
-import { PMREMCubeUVPacker } from 'three/examples/jsm/pmrem/PMREMCubeUVPacker'
-import { EquirectangularToCubeGenerator } from 'three/examples/jsm/loaders/EquirectangularToCubeGenerator'
 import loadTexture from './loadTexture'
 
 export default async function loadEnvMap(url, options) {
   const renderer = options.renderer
 
   if (!renderer) {
-    throw new Error(`PBR Map requires renderer to passed in the options for ${url}!`)
+    throw new Error(`Env map requires renderer to passed in the options for ${url}!`)
   }
 
   if (options.equirectangular) {
     const texture = await loadTexture(url, { renderer })
 
-    const cubemapGenerator = new EquirectangularToCubeGenerator(texture, { resolution: 1024 })
+    if (options.pmrem) {
+      return pmremEquirectangular(texture, renderer)
+    } else {
+      const size = highestPowerOfTwo(texture.image.naturalHeight)
+      const renderTarget = new THREE.WebGLCubeRenderTarget(size, {
+        generateMipmaps: true,
+        minFilter: THREE.LinearMipmapLinearFilter,
+        magFilter: THREE.LinearFilter,
+      })
 
-    const cubeMapTexture = cubemapGenerator.update(renderer)
+      const outTexture = renderTarget.fromEquirectangularTexture(renderer, texture).texture
 
-    // renderTarget is used for the scene.background
-    cubeMapTexture.renderTarget = cubemapGenerator.renderTarget
+      texture.dispose() // dispose original texture
+      texture.image.data = null // remove image reference
 
-    texture.dispose() // dispose original texture
-    texture.image.data = null // remove Image reference
-
-    return buildCubeMap(cubeMapTexture, options)
+      return outTexture
+    }
   }
 
   const basePath = url
+  const extension = options.extension || '.jpg'
+  const urls = generateCubeUrls(`${basePath.replace(/\/$/, '')}/`, extension)
 
-  const isHDR = options.hdr
-  const extension = isHDR ? '.hdr' : '.png'
-  const urls = genCubeUrls(`${basePath.replace(/\/$/, '')}/`, extension)
-
-  if (isHDR) {
+  if (extension === '.hdr') {
     // load a float HDR texture
     return new Promise((resolve, reject) => {
       new HDRCubeTextureLoader().load(
         THREE.UnsignedByteType,
         urls,
-        map => resolve(buildCubeMap(map, options)),
+        (cubeMap) => resolve(assignCubemapOptions(cubeMap, options)),
         null,
-        () => reject(new Error(`Could not load PBR map: ${basePath}`))
+        () => reject(new Error(`Could not load env map: ${basePath}`))
       )
     })
   }
@@ -55,38 +53,54 @@ export default async function loadEnvMap(url, options) {
   return new Promise((resolve, reject) => {
     new THREE.CubeTextureLoader().load(
       urls,
-      cubeMap => {
-        cubeMap.encoding = THREE.RGBM16Encoding
-        resolve(buildCubeMap(cubeMap, options))
-      },
+      (cubeMap) => resolve(assignCubemapOptions(cubeMap, options)),
       null,
-      () => reject(new Error(`Could not load PBR map: ${basePath}`))
+      () => reject(new Error(`Could not load env map: ${basePath}`))
     )
   })
 }
 
-function buildCubeMap(cubeMap, options) {
-  if (options.pbr || typeof options.level === 'number') {
-    // prefilter the environment map for irradiance
-    const pmremGenerator = new PMREMGenerator(cubeMap)
-    pmremGenerator.update(options.renderer)
-    if (options.pbr) {
-      const pmremCubeUVPacker = new PMREMCubeUVPacker(pmremGenerator.cubeLods)
-      pmremCubeUVPacker.update(options.renderer)
-      const target = pmremCubeUVPacker.CubeUVRenderTarget
-      cubeMap = target.texture
-      pmremCubeUVPacker.dispose()
-    } else {
-      const idx = clamp(Math.floor(options.level), 0, pmremGenerator.cubeLods.length)
-      cubeMap = pmremGenerator.cubeLods[idx].texture
-    }
-    pmremGenerator.dispose()
+function assignCubemapOptions(cubeMap, options) {
+  if (options.encoding) {
+    cubeMap.encoding = options.encoding
   }
-  if (options.mapping) cubeMap.mapping = options.mapping
+  if (options.format) {
+    cubeMap.format = options.format
+  }
+  if (options.pmrem) {
+    cubeMap = pmremCubemap(cubeMap, options.renderer)
+  }
   return cubeMap
 }
 
-function genCubeUrls(prefix, postfix) {
+// prefilter the environment map for irradiance
+function pmremEquirectangular(texture, renderer) {
+  const pmremGenerator = new THREE.PMREMGenerator(renderer)
+  pmremGenerator.compileEquirectangularShader()
+
+  const cubeRenderTarget = pmremGenerator.fromEquirectangular(texture)
+
+  pmremGenerator.dispose() // dispose PMREMGenerator
+  texture.dispose() // dispose original texture
+  texture.image.data = null // remove image reference
+
+  return cubeRenderTarget.texture
+}
+
+// prefilter the environment map for irradiance
+function pmremCubemap(cubeMap, renderer) {
+  const pmremGenerator = new THREE.PMREMGenerator(renderer)
+  pmremGenerator.compileCubemapShader()
+  const renderTarget = pmremGenerator.fromCubemap(cubeMap)
+
+  pmremGenerator.dispose() // dispose PMREMGenerator
+  cubeMap.dispose() // dispose original texture
+  cubeMap.image.data = null // remove image reference
+
+  return renderTarget.texture
+}
+
+function generateCubeUrls(prefix, postfix) {
   return [
     `${prefix}px${postfix}`,
     `${prefix}nx${postfix}`,

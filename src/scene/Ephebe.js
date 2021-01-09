@@ -1,7 +1,8 @@
 import * as THREE from 'three'
+import glsl from 'glslify'
 import assets from '../lib/AssetManager'
-import iridescenceAllColorsFrag from './shaders/iridescence-all-colors.frag'
-import { normalMaterialGlobalvertPos } from '../lib/three-utils'
+import { wireUniform } from '../lib/Controls'
+import { addUniforms, customizeVertexShader, customizeFragmentShader } from '../lib/customizeShader'
 
 const key = assets.queue({
   url: 'assets/ephebe_twerking.glb',
@@ -9,14 +10,15 @@ const key = assets.queue({
 })
 
 export class Ephebe extends THREE.Group {
-  constructor({ webgl, ...options }) {
+  constructor(webgl, options = {}) {
     super(options)
     this.webgl = webgl
+    this.options = options
 
     const gltf = assets.get(key)
-    // BUG gltf.scene.clone() doesn't clone .skinning
+    // BUG gltf.scene.clone() doesn't clone skinning
     const scene = gltf.scene
-    scene.traverse(child => {
+    scene.traverse((child) => {
       if (child.isMesh) {
         this.ephebe = child
       }
@@ -26,30 +28,54 @@ export class Ephebe extends THREE.Group {
     const clip = gltf.animations[0].clone()
     this.mixer.clipAction(clip).play()
 
-    const { powerFactor, speed, multiplicator } = this.webgl.controls.ephebe
+    this.ephebe.material = new THREE.MeshPhysicalMaterial({ skinning: true })
 
-    this.ephebe.material = new THREE.ShaderMaterial({
-      uniforms: {
-        time: { value: 0.0 },
-        powerFactor: { value: powerFactor },
-        speed: { value: speed },
-        multiplicator: { value: multiplicator },
-      },
-      vertexShader: normalMaterialGlobalvertPos,
-      fragmentShader: iridescenceAllColorsFrag,
+    addUniforms(this.ephebe.material, {
+      time: { value: 0 },
+      // powerFactor: { value: this.webgl.controls.ephebe.powerFactor },
+      // multiplicator: { value: this.webgl.controls.ephebe.multiplicator },
+      powerFactor: wireUniform(this.ephebe.material, () => this.webgl.controls.ephebe.powerFactor),
+      multiplicator: wireUniform(
+        this.ephebe.material,
+        () => this.webgl.controls.ephebe.multiplicator
+      ),
     })
-    this.ephebe.material.skinning = true
 
-    this.webgl.controls.$onChanges(controls => {
-      if (controls['ephebe.powerFactor']) {
-        this.ephebe.material.uniforms.powerFactor.value = controls['ephebe.powerFactor'].value
-      }
-      if (controls['ephebe.speed']) {
-        this.ephebe.material.uniforms.speed.value = controls['ephebe.speed'].value
-      }
-      if (controls['ephebe.multiplicator']) {
-        this.ephebe.material.uniforms.multiplicator.value = controls['ephebe.multiplicator'].value
-      }
+    customizeVertexShader(this.ephebe.material, {
+      head: glsl`
+        out vec3 vPosition;
+      `,
+      main: glsl`
+        vPosition = position;
+      `,
+      // like MeshNormalMaterial, but the normals are relative to world not camera
+      transformedNormal: glsl`
+        transformedNormal = mat3(modelMatrix) * objectNormal;
+      `,
+    })
+
+    customizeFragmentShader(this.ephebe.material, {
+      head: glsl`
+        uniform float time;
+        uniform float powerFactor;
+        uniform float multiplicator;
+
+        in vec3 vPosition;
+
+        #pragma glslify: hsl2rgb = require(glsl-hsl2rgb)
+      `,
+      diffuse: glsl`
+        // The camera sometimes would be too close to the position,
+        // so the vector would point to the negative position.
+        // Multiplicating the camera position by a big number fixes it.
+        vec3 cameraDirection = normalize(cameraPosition * 1000.0 - vPosition);
+
+        float iridescence = pow(dot(vNormal, cameraDirection), powerFactor) * multiplicator;
+
+        // circle the hue
+        float hue = mod(iridescence + time, 1.0);
+        diffuse = hsl2rgb(hue, 1.0, 0.5);
+      `,
     })
 
     scene.scale.multiplyScalar(0.25)
@@ -62,6 +88,6 @@ export class Ephebe extends THREE.Group {
   update(dt, time) {
     this.mixer.update(dt)
 
-    this.ephebe.material.uniforms.time.value = time
+    this.ephebe.material.uniforms.time.value += dt * this.webgl.controls.ephebe.speed
   }
 }

@@ -17,19 +17,17 @@ const PROTOCOL = 'http'
 const HOST = '0.0.0.0'
 // check if the port is already in use, if so use the next port
 const DEFAULT_PORT = '8080'
-const PORT = execSync(`detect-port ${DEFAULT_PORT}`)
-  .toString()
-  .trim()
+const PORT = execSync(`detect-port ${DEFAULT_PORT}`).toString().replace(/\D/g, '')
 const urls = prepareUrls(PROTOCOL, HOST, PORT)
 
 // make the console >tree command look pretty
 function beautifyTree(tree) {
-  const trimEnd = s => s.slice(0, s.indexOf('\n\n'))
-  const addByteUnit = s => s.replace(/\[ *([0-9]+)\]/g, '[$1B]')
-  const replaceBrackets = s => s.replace(/\[(.+)\]/g, chalk.yellow('$1'))
-  const boldFirstLine = s => s.replace(/^(.*\n)/g, chalk.bold('$1'))
-  const colorIt = s => chalk.cyan(s)
-  const indent = s => indentString(s, 2)
+  const trimEnd = (s) => s.slice(0, s.indexOf('\n\n'))
+  const addByteUnit = (s) => s.replace(/\[ *([0-9]+)\]/g, '[$1B]')
+  const replaceBrackets = (s) => s.replace(/\[(.+)\]/g, chalk.yellow('$1'))
+  const boldFirstLine = (s) => s.replace(/^(.*\n)/g, chalk.bold('$1'))
+  const colorIt = (s) => chalk.cyan(s)
+  const indent = (s) => indentString(s, 2)
 
   const beautify = _.flow([trimEnd, addByteUnit, replaceBrackets, boldFirstLine, colorIt, indent])
 
@@ -74,6 +72,10 @@ module.exports = merge.smart(
     // TODO re-enable this when it will be more beautiful
     // https://github.com/webpack/webpack-cli/issues/575
     stats: false,
+    // TODO temporary needed for ccapture.js
+    node: {
+      fs: 'empty',
+    },
   },
   //
   //  $$$$$$\    $$$$$$$$\     $$$$$$\     $$$$$$$\    $$$$$$$$\
@@ -106,10 +108,7 @@ module.exports = merge.smart(
       compress: true,
       // Sssh...
       quiet: true,
-      clientLogLevel: 'none',
-      // enable HMR
-      // TODO do code to enable HMR from the client-side
-      // hot: true,
+      clientLogLevel: 'silent',
       after() {
         // try to open into the already existing tab
         openBrowser(urls.localUrlForBrowser)
@@ -121,11 +120,10 @@ module.exports = merge.smart(
       // TODO use webpack's api when it will be implemented
       // https://github.com/webpack/webpack-dev-server/issues/1509
       new EventHooksPlugin({
-        // debounced because it gets called two times somehow
-        beforeCompile: _.debounce(() => {
+        compile() {
           console.clear()
           console.log('⏳  Compiling...')
-        }, 0),
+        },
         done(stats) {
           if (stats.hasErrors()) {
             const statsJson = stats.toJson({ all: false, warnings: true, errors: true })
@@ -171,10 +169,9 @@ module.exports = merge.smart(
       // TODO use webpack's api when it will be implemented
       // https://github.com/webpack/webpack-dev-server/issues/1509
       new EventHooksPlugin({
-        // debounced because it gets called two times somehow
-        beforeCompile: _.debounce(() => {
+        compile() {
           console.log('⏳  Compiling...')
-        }, 0),
+        },
         done(stats) {
           if (stats.hasErrors()) {
             const statsJson = stats.toJson({ all: false, warnings: true, errors: true })
@@ -182,9 +179,9 @@ module.exports = merge.smart(
             console.log(chalk.red('❌  Failed to compile.'))
             console.log()
             console.log(messages.errors[0])
+            return
           }
-        },
-        afterEmit() {
+
           console.log(chalk.green(`✅  Compiled successfully!`))
           console.log(`The folder ${chalk.bold(`build/`)} is ready to be deployed`)
           console.log()
@@ -233,9 +230,9 @@ module.exports = merge.smart(
               ascii_only: true,
             },
           },
-          parallel: true,
-          cache: true,
           sourceMap: true,
+          // Don't generate the license.txt file
+          extractComments: false,
         }),
       ],
     },

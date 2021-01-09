@@ -1,8 +1,9 @@
-import State from 'controls-state'
+import * as THREE from 'three'
 import WebGLApp from './lib/WebGLApp'
 import assets from './lib/AssetManager'
 import { Ephebe } from './scene/Ephebe'
 import { Hills } from './scene/Hills'
+import { wireValue } from './lib/Controls'
 
 window.DEBUG = window.location.search.includes('debug')
 
@@ -15,59 +16,48 @@ const webgl = new WebGLApp({
   controls: {
     background: '#070758',
     ephebe: {
-      powerFactor: State.Slider(0.8, {
-        min: 0.01,
+      powerFactor: {
+        value: 0.8,
         max: 5,
-        step: 0.01,
-      }),
-      speed: State.Slider(0.1, {
-        min: 0.01,
+      },
+      speed: {
+        value: 0.1,
         max: 10,
-        step: 0.01,
-      }),
-      multiplicator: State.Slider(0.6, {
-        min: 0.01,
+        scale: 'exp',
+      },
+      multiplicator: {
+        value: 0.6,
         max: 10,
-        step: 0.01,
-      }),
+        scale: 'exp',
+      },
     },
     hills: {
-      powerFactor: State.Slider(1.13, {
-        min: 0.01,
+      powerFactor: {
+        value: 1.13,
         max: 5,
-        step: 0.01,
-      }),
-      speed: State.Slider(0.3, {
-        min: 0.01,
+      },
+      speed: {
+        value: 0.3,
         max: 10,
-        step: 0.01,
-      }),
-      multiplicator: State.Slider(2.5, {
-        min: 0.01,
+        scale: 'exp',
+      },
+      multiplicator: {
+        value: 2.5,
         max: 20,
-        step: 0.01,
-      }),
+        scale: 'exp',
+      },
       firstColor: '#CE1DC5',
       secondColor: '#00E6CC',
     },
   },
   closeControls: !window.DEBUG,
   showFps: window.DEBUG,
+  cameraPosition: new THREE.Vector3(0, 2, 5),
   orbitControls: {
-    distance: 5,
-    target: [0, 1.2, 0],
-    phi: Math.PI * 0.4,
-    phiBounds: !window.DEBUG && [0, Math.PI * 0.5],
-    distanceBounds: !window.DEBUG && [5, 5],
+    target: new THREE.Vector3(0, 1.2, 0),
+    enableZoom: window.DEBUG,
+    maxPolarAngle: !window.DEBUG ? Math.PI / 2 : Math.PI,
   },
-})
-
-// change the background color on controls changes
-webgl.renderer.setClearColor(webgl.controls.background, 1)
-webgl.controls.$onChanges(({ background }) => {
-  if (background) {
-    webgl.renderer.setClearColor(background.value, 1)
-  }
 })
 
 // attach it to the window to inspect in the console
@@ -86,12 +76,23 @@ assets.load({ renderer: webgl.renderer }).then(() => {
   // add any "WebGL components" here...
   // append them to the scene so you can
   // use them from other components easily
-  webgl.scene.ephebe = new Ephebe({ webgl })
+  webgl.scene.ephebe = new Ephebe(webgl)
   webgl.scene.add(webgl.scene.ephebe)
-  webgl.scene.hills = new Hills({ webgl })
+  webgl.scene.hills = new Hills(webgl)
   webgl.scene.add(webgl.scene.hills)
+
+  // change the background color on controls changes
+  webgl.background = webgl.controls.background
+  wireValue(webgl, () => webgl.controls.background)
+
+  const ambientLight = new THREE.AmbientLight('white', 1)
+  webgl.scene.add(ambientLight)
+
+  const spotLight = new THREE.SpotLight('white', 1, 20)
+  spotLight.position.set(5, 5, 5)
+  spotLight.lookAt(0, 0, 0)
+  webgl.scene.add(spotLight)
 
   // start animation loop
   webgl.start()
-  webgl.draw()
 })

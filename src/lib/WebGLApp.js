@@ -1,62 +1,109 @@
-// Inspiration for this class goes to Matt DesLauriers @mattdesl,
-// really awesome dude, give him a follow!
-// https://github.com/mattdesl/threejs-app/blob/master/src/webgl/WebGLApp.js
 import * as THREE from 'three'
-import createOrbitControls from 'orbit-controls'
-import createTouches from 'touches'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import dataURIToBlob from 'datauritoblob'
 import Stats from 'stats.js'
-import State from 'controls-state'
-import wrapGUI from 'controls-gui'
 import { getGPUTier } from 'detect-gpu'
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer'
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass'
+import { EffectComposer, RenderPass } from 'postprocessing'
+// import cannonDebugger from 'cannon-es-debugger'
+import CCapture from 'ccapture.js'
+import { initControls } from './Controls'
 
 export default class WebGLApp {
+  #width
+  #height
+  #capturer
+  isRunning = false
+  time = 0
+  dt = 0
+  #lastTime = performance.now()
   #updateListeners = []
-  #tmpTarget = new THREE.Vector3()
-  #rafID
-  #lastTime
+  #pointerdownListeners = []
+  #pointermoveListeners = []
+  #pointerupListeners = []
+  #startX
+  #startY
+
+  get background() {
+    return this.renderer.getClearColor(new THREE.Color())
+  }
+
+  get backgroundAlpha() {
+    return this.renderer.getClearAlpha()
+  }
+
+  set background(background) {
+    this.renderer.setClearColor(background, this.backgroundAlpha)
+  }
+
+  set backgroundAlpha(backgroundAlpha) {
+    this.renderer.setClearColor(this.background, backgroundAlpha)
+  }
+
+  get isRecording() {
+    return Boolean(this.#capturer)
+  }
 
   constructor({
-    background = '#000',
+    background = '#111',
     backgroundAlpha = 1,
     fov = 45,
+    frustumSize = 3,
     near = 0.01,
     far = 100,
     ...options
   } = {}) {
     this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: false,
-      // enabled for saving screenshots of the canvas,
-      // may wish to disable this for perf reasons
+      antialias: !options.postprocessing,
+      alpha: backgroundAlpha !== 1,
+      // enabled for recording gifs or videos,
+      // might disable it for performance reasons
       preserveDrawingBuffer: true,
-      failIfMajorPerformanceCaveat: true,
       ...options,
     })
+    if (options.sortObjects !== undefined) {
+      this.renderer.sortObjects = options.sortObjects
+    }
+    if (options.gamma) {
+      this.renderer.outputEncoding = THREE.sRGBEncoding
+    }
+    if (options.xr) {
+      this.renderer.xr.enabled = true
+    }
 
-    this.renderer.sortObjects = false
     this.canvas = this.renderer.domElement
 
     this.renderer.setClearColor(background, backgroundAlpha)
 
+    // save the fixed dimensions
+    this.#width = options.width
+    this.#height = options.height
+
     // clamp pixel ratio for performance
     this.maxPixelRatio = options.maxPixelRatio || 2
-    // clamp delta to stepping anything too far forward
+    // clamp delta to avoid stepping anything too far forward
     this.maxDeltaTime = options.maxDeltaTime || 1 / 30
 
-    // setup a basic camera
-    this.camera = new THREE.PerspectiveCamera(fov, 1, near, far)
+    // setup the camera
+    const aspect = this.#width / this.#height
+    if (!options.orthographic) {
+      this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far)
+    } else {
+      this.camera = new THREE.OrthographicCamera(
+        -(frustumSize * aspect) / 2,
+        (frustumSize * aspect) / 2,
+        frustumSize / 2,
+        -frustumSize / 2,
+        near,
+        far
+      )
+      this.camera.frustumSize = frustumSize
+    }
+    this.camera.position.copy(options.cameraPosition || new THREE.Vector3(0, 0, 4))
+    this.camera.lookAt(0, 0, 0)
 
     this.scene = new THREE.Scene()
 
     this.gl = this.renderer.getContext()
-
-    this.time = 0
-    this.isRunning = false
-    this.#lastTime = performance.now()
-    this.#rafID = null
 
     // handle resize events
     window.addEventListener('resize', this.resize)
@@ -67,40 +114,98 @@ export default class WebGLApp {
 
     // __________________________ADDONS__________________________
 
-    // really basic touch handler that propagates through the scene
-    this.touchHandler = createTouches(this.canvas, {
-      target: this.canvas,
-      filtered: true,
+    // really basic pointer events handler, the second argument
+    // contains the x and y relative to the top left corner
+    // of the canvas.
+    // In case of touches with multiple fingers, only the
+    // first touch is registered.
+    this.isDragging = false
+    this.canvas.addEventListener('pointerdown', (event) => {
+      if (!event.isPrimary) return
+      this.isDragging = true
+      this.#startX = event.offsetX
+      this.#startY = event.offsetY
+      // call onPointerDown method
+      this.scene.traverse((child) => {
+        if (typeof child.onPointerDown === 'function') {
+          child.onPointerDown(event, { x: event.offsetX, y: event.offsetY })
+        }
+      })
+      // call the pointerdown listeners
+      this.#pointerdownListeners.forEach((fn) => fn(event, { x: event.offsetX, y: event.offsetY }))
     })
-    this.touchHandler.on('start', (ev, pos) => this.traverse('onPointerDown', ev, pos))
-    this.touchHandler.on('move', (ev, pos) => this.traverse('onPointerMove', ev, pos))
-    this.touchHandler.on('end', (ev, pos) => this.traverse('onPointerUp', ev, pos))
+    this.canvas.addEventListener('pointermove', (event) => {
+      if (!event.isPrimary) return
+      // call onPointerMove method
+      const position = {
+        x: event.offsetX,
+        y: event.offsetY,
+        ...(this.#startX !== undefined && { dragX: event.offsetX - this.#startX }),
+        ...(this.#startY !== undefined && { dragY: event.offsetY - this.#startY }),
+      }
+      this.scene.traverse((child) => {
+        if (typeof child.onPointerMove === 'function') {
+          child.onPointerMove(event, position)
+        }
+      })
+      // call the pointermove listeners
+      this.#pointermoveListeners.forEach((fn) => fn(event, position))
+    })
+    this.canvas.addEventListener('pointerup', (event) => {
+      if (!event.isPrimary) return
+      this.isDragging = false
+      // call onPointerUp method
+      const position = {
+        x: event.offsetX,
+        y: event.offsetY,
+        ...(this.#startX !== undefined && { dragX: event.offsetX - this.#startX }),
+        ...(this.#startY !== undefined && { dragY: event.offsetY - this.#startY }),
+      }
+      this.scene.traverse((child) => {
+        if (typeof child.onPointerUp === 'function') {
+          child.onPointerUp(event, position)
+        }
+      })
+      // call the pointerup listeners
+      this.#pointerupListeners.forEach((fn) => fn(event, position))
+
+      this.#startX = undefined
+      this.#startY = undefined
+    })
 
     // expose a composer for postprocessing passes
     if (options.postprocessing) {
-      this.composer = new EffectComposer(this.renderer)
+      const maxMultisampling = this.gl.getParameter(this.gl.MAX_SAMPLES)
+      this.composer = new EffectComposer(this.renderer, {
+        multisampling: Math.min(8, maxMultisampling),
+        frameBufferType: options.gamma ? THREE.HalfFloatType : undefined,
+        ...options,
+      })
       this.composer.addPass(new RenderPass(this.scene, this.camera))
     }
 
-    // set up a simple orbit controller
+    // set up OrbitControls
     if (options.orbitControls) {
-      this.orbitControls = createOrbitControls({
-        element: this.canvas,
-        parent: window,
-        distance: 5,
-        ...(options.orbitControls instanceof Object ? options.orbitControls : {}),
-      })
+      this.orbitControls = new OrbitControls(this.camera, this.canvas)
 
-      // move the camera position accordingly to the orbitcontrols options
-      this.camera.position.fromArray(this.orbitControls.position)
-      this.camera.lookAt(new THREE.Vector3().fromArray(this.orbitControls.target))
+      this.orbitControls.enableDamping = true
+      this.orbitControls.dampingFactor = 0.15
+      this.orbitControls.enablePan = false
+
+      if (options.orbitControls instanceof Object) {
+        Object.keys(options.orbitControls).forEach((key) => {
+          this.orbitControls[key] = options.orbitControls[key]
+        })
+      }
     }
 
     // Attach the Cannon physics engine
-    if (options.world) this.world = options.world
-
-    // Attach Tween.js
-    if (options.tween) this.tween = options.tween
+    if (options.world) {
+      this.world = options.world
+      if (options.showWorldWireframes) {
+        this.cannonDebugger = cannonDebugger(this.scene, this.world.bodies, { autoUpdate: false })
+      }
+    }
 
     // show the fps meter
     if (options.showFps) {
@@ -111,36 +216,33 @@ export default class WebGLApp {
 
     // initialize the controls-state
     if (options.controls) {
-      const controlsState = State(options.controls)
-      this.controls = options.hideControls ? controlsState : wrapGUI(controlsState)
-      if (options.closeControls) {
-        const controlsElement = document.querySelector('[class*="controlPanel"]')
-
-        controlsElement.style.display = 'none'
-        const controlsButton = document.querySelector('[class*="controlPanel"] button')
-        controlsButton.click()
-        controlsElement.style.display = 'block'
-      }
+      this.controls = initControls(options.controls, options)
     }
 
     // detect the gpu info
-    const gpu = getGPUTier({ glContext: this.renderer.getContext() })
-    this.gpu = {
-      name: gpu.type,
-      tier: Number(gpu.tier.slice(-1)),
-      isMobile: gpu.tier.toLowerCase().includes('mobile'),
-    }
+    this.loadGPUTier = getGPUTier({ glContext: this.gl }).then((gpuTier) => {
+      this.gpu = {
+        name: gpuTier.gpu,
+        tier: gpuTier.tier,
+        isMobile: gpuTier.isMobile,
+        fps: gpuTier.fps,
+      }
+    })
   }
 
-  resize = ({
-    width = window.innerWidth,
-    height = window.innerHeight,
-    pixelRatio = Math.min(this.maxPixelRatio, window.devicePixelRatio),
-  } = {}) => {
-    this.width = width
-    this.height = height
-    this.pixelRatio = pixelRatio
+  get width() {
+    return this.#width || window.innerWidth
+  }
 
+  get height() {
+    return this.#height || window.innerHeight
+  }
+
+  get pixelRatio() {
+    return Math.min(this.maxPixelRatio, window.devicePixelRatio)
+  }
+
+  resize = ({ width = this.width, height = this.height, pixelRatio = this.pixelRatio } = {}) => {
     // update pixel ratio if necessary
     if (this.renderer.getPixelRatio() !== pixelRatio) {
       this.renderer.setPixelRatio(pixelRatio)
@@ -150,16 +252,23 @@ export default class WebGLApp {
     this.renderer.setSize(width, height)
     if (this.camera.isPerspectiveCamera) {
       this.camera.aspect = width / height
+    } else {
+      const aspect = width / height
+      this.camera.left = -(this.camera.frustumSize * aspect) / 2
+      this.camera.right = (this.camera.frustumSize * aspect) / 2
+      this.camera.top = this.camera.frustumSize / 2
+      this.camera.bottom = -this.camera.frustumSize / 2
     }
     this.camera.updateProjectionMatrix()
 
-    // resize also the composer
+    // resize also the composer, width and height
+    // are automatically extracted from the renderer
     if (this.composer) {
-      this.composer.setSize(pixelRatio * width, pixelRatio * height)
+      this.composer.setSize()
     }
 
     // recursively tell all child objects to resize
-    this.scene.traverse(obj => {
+    this.scene.traverse((obj) => {
       if (typeof obj.resize === 'function') {
         obj.resize({
           width,
@@ -175,7 +284,7 @@ export default class WebGLApp {
   }
 
   // convenience function to trigger a PNG download of the canvas
-  saveScreenshot = ({ width = 2560, height = 1440, fileName = 'image.png' } = {}) => {
+  saveScreenshot = ({ width = 1920, height = 1080, fileName = 'Screenshot.png' } = {}) => {
     // force a specific output size
     this.resize({ width, height, pixelRatio: 1 })
     this.draw()
@@ -190,43 +299,77 @@ export default class WebGLApp {
     saveDataURI(fileName, dataURI)
   }
 
-  update = (dt, time) => {
+  // start recording of a gif or a video
+  startRecording = ({
+    width = 1920,
+    height = 1080,
+    fileName = 'Recording',
+    format = 'gif',
+    ...options
+  } = {}) => {
+    if (this.#capturer) {
+      return
+    }
+
+    // force a specific output size
+    this.resize({ width, height, pixelRatio: 1 })
+    this.draw()
+
+    this.#capturer = new CCapture({
+      format,
+      name: fileName,
+      workersPath: '',
+      motionBlurFrames: 2,
+      ...options,
+    })
+    this.#capturer.start()
+  }
+
+  stopRecording = () => {
+    if (!this.#capturer) {
+      return
+    }
+
+    this.#capturer.stop()
+    this.#capturer.save()
+    this.#capturer = undefined
+
+    // reset to default size
+    this.resize()
+    this.draw()
+  }
+
+  update = (dt, time, xrframe) => {
     if (this.orbitControls) {
       this.orbitControls.update()
-
-      // reposition to orbit controls
-      this.camera.up.fromArray(this.orbitControls.up)
-      this.camera.position.fromArray(this.orbitControls.position)
-      this.#tmpTarget.fromArray(this.orbitControls.target)
-      this.camera.lookAt(this.#tmpTarget)
     }
 
     // recursively tell all child objects to update
-    this.scene.traverse(obj => {
-      if (typeof obj.update === 'function') {
-        obj.update(dt, time)
+    this.scene.traverse((obj) => {
+      if (typeof obj.update === 'function' && !obj.isTransformControls) {
+        obj.update(dt, time, xrframe)
       }
     })
 
     if (this.world) {
-      // update the Cannon physics engine
-      this.world.step(dt)
+      // update the cannon-es physics engine
+      this.world.step(1 / 60, dt)
+
+      // update the debug wireframe renderer
+      if (this.cannonDebugger) {
+        this.cannonDebugger.update()
+      }
 
       // recursively tell all child bodies to update
-      this.world.bodies.forEach(body => {
+      this.world.bodies.forEach((body) => {
         if (typeof body.update === 'function') {
           body.update(dt, time)
         }
       })
     }
 
-    if (this.tween) {
-      // update the Tween.js engine
-      this.tween.update()
-    }
-
     // call the update listeners
-    this.#updateListeners.forEach(fn => fn(dt, time))
+    this.#updateListeners.forEach((fn) => fn(dt, time, xrframe))
 
     return this
   }
@@ -235,20 +378,65 @@ export default class WebGLApp {
     this.#updateListeners.push(fn)
   }
 
+  onPointerDown(fn) {
+    this.#pointerdownListeners.push(fn)
+  }
+
+  onPointerMove(fn) {
+    this.#pointermoveListeners.push(fn)
+  }
+
+  onPointerUp(fn) {
+    this.#pointerupListeners.push(fn)
+  }
+
+  offUpdate(fn) {
+    const index = this.#updateListeners.indexOf(fn)
+
+    // return silently if the function can't be found
+    if (index === -1) {
+      return
+    }
+
+    this.#updateListeners.splice(index, 1)
+  }
+
+  offPointerDown(fn) {
+    const index = this.#pointerdownListeners.indexOf(fn)
+
+    // return silently if the function can't be found
+    if (index === -1) {
+      return
+    }
+
+    this.#pointerdownListeners.splice(index, 1)
+  }
+
+  offPointerMove(fn) {
+    const index = this.#pointermoveListeners.indexOf(fn)
+
+    // return silently if the function can't be found
+    if (index === -1) {
+      return
+    }
+
+    this.#pointermoveListeners.splice(index, 1)
+  }
+
+  offPointerUp(fn) {
+    const index = this.#pointerupListeners.indexOf(fn)
+
+    // return silently if the function can't be found
+    if (index === -1) {
+      return
+    }
+
+    this.#pointerupListeners.splice(index, 1)
+  }
+
   draw = () => {
     if (this.composer) {
-      // make sure to always render the last pass
-      this.composer.passes.forEach((pass, i, passes) => {
-        const isLastElement = i === passes.length - 1
-
-        if (isLastElement) {
-          pass.renderToScreen = true
-        } else {
-          pass.renderToScreen = false
-        }
-      })
-
-      this.composer.render()
+      this.composer.render(this.dt)
     } else {
       this.renderer.render(this.scene, this.camera)
     }
@@ -256,42 +444,45 @@ export default class WebGLApp {
   }
 
   start = () => {
-    if (this.#rafID !== null) return
-    this.#rafID = window.requestAnimationFrame(this.animate)
+    if (this.isRunning) return
+    this.renderer.setAnimationLoop(this.animate)
     this.isRunning = true
     return this
   }
 
   stop = () => {
-    if (this.#rafID === null) return
-    window.cancelAnimationFrame(this.#rafID)
-    this.#rafID = null
+    if (!this.isRunning) return
+    this.renderer.setAnimationLoop(null)
     this.isRunning = false
     return this
   }
 
-  animate = () => {
+  animate = (now, xrframe) => {
     if (!this.isRunning) return
-    window.requestAnimationFrame(this.animate)
 
     if (this.stats) this.stats.begin()
 
-    const now = performance.now()
-    const dt = Math.min(this.maxDeltaTime, (now - this.#lastTime) / 1000)
-    this.time += dt
+    this.dt = Math.min(this.maxDeltaTime, (now - this.#lastTime) / 1000)
+    this.time += this.dt
     this.#lastTime = now
-    this.update(dt, this.time)
+    this.update(this.dt, this.time, xrframe)
     this.draw()
+
+    if (this.#capturer) this.#capturer.capture(this.canvas)
 
     if (this.stats) this.stats.end()
   }
 
-  traverse = (fn, ...args) => {
-    this.scene.traverse(child => {
-      if (typeof child[fn] === 'function') {
-        child[fn].apply(child, args)
-      }
-    })
+  get cursor() {
+    return this.canvas.style.cursor
+  }
+
+  set cursor(cursor) {
+    if (cursor) {
+      this.canvas.style.cursor = cursor
+    } else {
+      this.canvas.style.cursor = null
+    }
   }
 }
 
