@@ -88,10 +88,10 @@ assets.load({ renderer: webgl.renderer }).then(() => {
   const ambientLight = new THREE.AmbientLight('white', 1)
   webgl.scene.add(ambientLight)
 
-  const spotLight = new THREE.SpotLight('white', 1, 20)
-  spotLight.position.set(5, 5, 5)
-  spotLight.lookAt(0, 0, 0)
-  webgl.scene.add(spotLight)
+  // const spotLight = new THREE.SpotLight('white', 1, 20)
+  // spotLight.position.set(5, 5, 5)
+  // spotLight.lookAt(0, 0, 0)
+  // webgl.scene.add(spotLight)
 
   // start animation loop
   webgl.start()

@@ -70,11 +70,16 @@ export class Ephebe extends THREE.Group {
         // Multiplicating the camera position by a big number fixes it.
         vec3 cameraDirection = normalize(cameraPosition * 1000.0 - vPosition);
 
-        float iridescence = pow(dot(vNormal, cameraDirection), powerFactor) * multiplicator;
+        // 1 when facing the camera, 0 when perpendicular
+        float fresnel = dot(vNormal, cameraDirection);
 
-        // circle the hue
-        float hue = mod(iridescence + time, 1.0);
-        diffuse = hsl2rgb(hue, 1.0, 0.5);
+        float iridescence = pow(fresnel, powerFactor) * multiplicator;
+
+        // circle the whole hue wheel,
+        // the function looks like this /|/|/|/|/
+        float f = mod(iridescence + time, 1.0);
+
+        diffuse = hsl2rgb(f, 1.0, 0.5);
       `,
     })
 

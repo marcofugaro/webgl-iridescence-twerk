@@ -102,15 +102,16 @@ export class Hills extends THREE.Group {
         // Multiplicating the camera position by a big number fixes it.
         vec3 cameraDirection = normalize(cameraPosition * 1000.0 - vPosition);
 
-        float iridescence = pow(dot(vNormal, cameraDirection), powerFactor) * multiplicator;
+        // 1 when facing the camera, 0 when perpendicular
+        float fresnel = dot(vNormal, cameraDirection);
 
-        // show all colors
-        float hue = mod(iridescence + time, 1.0);
-        vec3 rainbowColor = hsl2rgb(hue, 1.0, 0.5);
+        float iridescence = pow(fresnel, powerFactor) * multiplicator;
 
         // alternate between two colors,
         // the function looks like this /\/\/\/\/
-        diffuse = mix(firstColor, secondColor, abs(1.0 - mod(iridescence + time, 2.0)));
+        float f = abs(1.0 - mod(iridescence + time, 2.0));
+
+        diffuse = mix(firstColor, secondColor, f);
       `,
     })
 
