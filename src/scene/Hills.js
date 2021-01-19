@@ -1,10 +1,17 @@
 import * as THREE from 'three'
 import glsl from 'glslify'
+import assets from '../lib/AssetManager'
 import { addUniforms, customizeVertexShader, customizeFragmentShader } from '../lib/customizeShader'
 import { wireUniform } from '../lib/Controls'
 
 const SIZE = 20
 const RESOLUTION = 256
+
+const envmapKey = assets.queue({
+  url: 'assets/envs/49TH_STREET.exr',
+  type: 'envmap',
+  pmrem: true,
+})
 
 export class Hills extends THREE.Group {
   constructor(webgl, options = {}) {
@@ -12,7 +19,29 @@ export class Hills extends THREE.Group {
     this.webgl = webgl
     this.options = options
 
-    this.material = new THREE.MeshPhysicalMaterial()
+    this.material = new THREE.MeshPhysicalMaterial({
+      roughness: 0.2,
+      metalness: 1,
+      envMap: assets.get(envmapKey),
+      envMapIntensity: 0.5,
+    })
+
+    // TODO define this api
+    // subscribe(webgl.controls.hills.roughness, (value) => {
+    //   material.roughness = vaule
+    // })
+
+    // which becomes
+
+    // subscribe(material, webgl.controls.hills.roughness)
+
+    // webgl.controlsObservable.hills.roughness.onChange((value) => {
+    //   material.roughness = vaule
+    // })
+
+    // // which becomes
+
+    // webgl.controlsObservable.hills.roughness.onChange(material)
 
     addUniforms(this.material, {
       time: { value: 0 },
@@ -93,10 +122,8 @@ export class Hills extends THREE.Group {
         uniform vec3 secondColor;
 
         in vec3 vPosition;
-
-        #pragma glslify: hsl2rgb = require(glsl-hsl2rgb)
       `,
-      diffuse: glsl`
+      main: glsl`
         // The camera sometimes would be too close to the position,
         // so the vector would point to the negative position.
         // Multiplicating the camera position by a big number fixes it.
@@ -107,11 +134,15 @@ export class Hills extends THREE.Group {
 
         float iridescence = pow(fresnel, powerFactor) * multiplicator;
 
+        // pingPong function
         // alternate between two colors,
         // the function looks like this /\/\/\/\/
         float f = abs(1.0 - mod(iridescence + time, 2.0));
 
-        diffuse = mix(firstColor, secondColor, f);
+        vec3 iridescentColor = mix(firstColor, secondColor, f);
+      `,
+      diffuse: glsl`
+        diffuse = iridescentColor;
       `,
     })
 

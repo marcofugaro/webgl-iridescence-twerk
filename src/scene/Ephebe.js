@@ -4,9 +4,17 @@ import assets from '../lib/AssetManager'
 import { wireUniform } from '../lib/Controls'
 import { addUniforms, customizeVertexShader, customizeFragmentShader } from '../lib/customizeShader'
 
-const key = assets.queue({
+const ephebeKey = assets.queue({
   url: 'assets/ephebe_twerking.glb',
   type: 'gltf',
+})
+
+// TODO check if file is duped
+// and check options
+const envmapKey = assets.queue({
+  url: 'assets/envs/49TH_STREET.exr',
+  type: 'envmap',
+  pmrem: true,
 })
 
 export class Ephebe extends THREE.Group {
@@ -15,7 +23,7 @@ export class Ephebe extends THREE.Group {
     this.webgl = webgl
     this.options = options
 
-    const gltf = assets.get(key)
+    const gltf = assets.get(ephebeKey)
     // BUG gltf.scene.clone() doesn't clone skinning
     const scene = gltf.scene
     scene.traverse((child) => {
@@ -28,7 +36,12 @@ export class Ephebe extends THREE.Group {
     const clip = gltf.animations[0].clone()
     this.mixer.clipAction(clip).play()
 
-    this.ephebe.material = new THREE.MeshPhysicalMaterial({ skinning: true })
+    this.ephebe.material = new THREE.MeshPhysicalMaterial({
+      skinning: true,
+      roughness: 0.25,
+      metalness: 1,
+      envMap: assets.get(envmapKey),
+    })
 
     addUniforms(this.ephebe.material, {
       time: { value: 0 },
@@ -63,8 +76,9 @@ export class Ephebe extends THREE.Group {
         in vec3 vPosition;
 
         #pragma glslify: hsl2rgb = require(glsl-hsl2rgb)
+        #pragma glslify: blendOverlay = require(glsl-blend/overlay)
       `,
-      diffuse: glsl`
+      main: glsl`
         // The camera sometimes would be too close to the position,
         // so the vector would point to the negative position.
         // Multiplicating the camera position by a big number fixes it.
@@ -79,7 +93,15 @@ export class Ephebe extends THREE.Group {
         // the function looks like this /|/|/|/|/
         float f = mod(iridescence + time, 1.0);
 
-        diffuse = hsl2rgb(f, 1.0, 0.5);
+        vec3 iridescentColor = hsl2rgb(f, 1.0, 0.5);
+      `,
+      diffuse: glsl`
+        diffuse = iridescentColor;
+      `,
+      // blend it again on top of all the lighting with
+      // overlay blend mode
+      gl_FragColor: glsl`
+        gl_FragColor.rgb = blendOverlay(gl_FragColor.rgb, iridescentColor);
       `,
     })
 

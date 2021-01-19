@@ -33,12 +33,12 @@
     ]
   },
   "dependencies": {
-    "canvas-sketch-util": "^1.10.0",
     "ccapture.js": "Unsigno/ccapture.js",
     "controls-gui": "^2.0.0",
-    "controls-state": "^2.0.0",
+    "controls-state": "rreusser/controls-state",
     "datauritoblob": "^1.0.0",
     "detect-gpu": "^3.0.0",
+    "glsl-blend": "^1.0.3",
     "glsl-hsl2rgb": "^1.1.0",
     "glsl-hypot": "^1.0.2",
     "glsl-noise": "^0.0.0",

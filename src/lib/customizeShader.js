@@ -24,6 +24,7 @@ export function customizeVertexShader(material, hooks) {
 
   constructOnBeforeCompile(material)
 }
+
 export function customizeFragmentShader(material, hooks) {
   prepareOnBeforeCompile(material)
 
@@ -61,6 +62,8 @@ export function monkeyPatch(
     objectNormal,
     transformedNormal,
     diffuse,
+    emissive,
+    gl_FragColor,
     ...replaces
   }
 ) {
@@ -114,6 +117,30 @@ export function monkeyPatch(
       vec3 diffuse_;
       ${replaceAll(diffuse, 'diffuse =', 'diffuse_ =')}
       vec4 diffuseColor = vec4(diffuse_, opacity);
+      `
+    )
+  }
+
+  if (emissive && patchedShader.includes('vec3 totalEmissiveRadiance = emissive;')) {
+    patchedShader = patchedShader.replace(
+      'vec3 totalEmissiveRadiance = emissive;',
+      `
+      vec3 emissive_;
+      ${replaceAll(emissive, 'emissive =', 'emissive_ =')}
+      vec3 totalEmissiveRadiance = emissive_;
+      `
+    )
+  }
+
+  if (
+    gl_FragColor &&
+    patchedShader.includes('gl_FragColor = vec4( outgoingLight, diffuseColor.a );')
+  ) {
+    patchedShader = patchedShader.replace(
+      'gl_FragColor = vec4( outgoingLight, diffuseColor.a );',
+      `
+        gl_FragColor = vec4(outgoingLight, diffuseColor.a);
+        ${gl_FragColor}
       `
     )
   }

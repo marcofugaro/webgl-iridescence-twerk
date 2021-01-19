@@ -4,6 +4,9 @@ import assets from './lib/AssetManager'
 import { Ephebe } from './scene/Ephebe'
 import { Hills } from './scene/Hills'
 import { wireValue } from './lib/Controls'
+import { addLights } from './scene/lights'
+import ContactShadow from './scene/ContactShadow'
+import { SoftShadowFloor } from './scene/SoftShadowFloor'
 
 window.DEBUG = window.location.search.includes('debug')
 
@@ -13,8 +16,8 @@ const canvas = document.querySelector('#app')
 // setup the WebGLRenderer
 const webgl = new WebGLApp({
   canvas,
+  backgroundAlpha: 0,
   controls: {
-    background: '#070758',
     ephebe: {
       powerFactor: {
         value: 0.8,
@@ -26,7 +29,7 @@ const webgl = new WebGLApp({
         scale: 'exp',
       },
       multiplicator: {
-        value: 0.6,
+        value: 1,
         max: 10,
         scale: 'exp',
       },
@@ -47,17 +50,19 @@ const webgl = new WebGLApp({
         scale: 'exp',
       },
       firstColor: '#CE1DC5',
-      secondColor: '#00E6CC',
+      secondColor: '#73e600',
     },
   },
   closeControls: !window.DEBUG,
   showFps: window.DEBUG,
+  maxPixelRatio: 1,
   cameraPosition: new THREE.Vector3(0, 2, 5),
   orbitControls: {
     target: new THREE.Vector3(0, 1.2, 0),
     enableZoom: window.DEBUG,
     maxPolarAngle: !window.DEBUG ? Math.PI / 2 : Math.PI,
   },
+  gamma: true,
 })
 
 // attach it to the window to inspect in the console
@@ -68,30 +73,27 @@ if (window.DEBUG) {
 // hide canvas
 webgl.canvas.style.visibility = 'hidden'
 
+const envmapKey = assets.queue({
+  url: 'assets/envs/photo.jpg',
+  type: 'envmap',
+})
+
 // load any queued assets
 assets.load({ renderer: webgl.renderer }).then(() => {
   // show canvas
   webgl.canvas.style.visibility = ''
 
   // add any "WebGL components" here...
-  // append them to the scene so you can
-  // use them from other components easily
-  webgl.scene.ephebe = new Ephebe(webgl)
-  webgl.scene.add(webgl.scene.ephebe)
-  webgl.scene.hills = new Hills(webgl)
-  webgl.scene.add(webgl.scene.hills)
+  const ephebe = new Ephebe(webgl)
+  webgl.scene.add(ephebe)
+  const hills = new Hills(webgl)
+  webgl.scene.add(hills)
+  // const contactShadow = new ContactShadow(webgl, { position: new THREE.Vector3(0, 0.1, 0) })
+  // webgl.scene.add(contactShadow)
 
-  // change the background color on controls changes
-  webgl.background = webgl.controls.background
-  wireValue(webgl, () => webgl.controls.background)
+  webgl.scene.background = assets.get(envmapKey)
 
-  const ambientLight = new THREE.AmbientLight('white', 1)
-  webgl.scene.add(ambientLight)
-
-  // const spotLight = new THREE.SpotLight('white', 1, 20)
-  // spotLight.position.set(5, 5, 5)
-  // spotLight.lookAt(0, 0, 0)
-  // webgl.scene.add(spotLight)
+  addLights(webgl)
 
   // start animation loop
   webgl.start()
