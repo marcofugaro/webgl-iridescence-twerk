@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import glsl from 'glslify'
-import { Reflector } from '../lib/Reflector'
+import { ReflectorPostprocessing } from '../lib/ReflectorPostprocessing'
 
 export class Reflection extends THREE.Group {
   constructor(webgl, options = {}) {
@@ -9,11 +9,13 @@ export class Reflection extends THREE.Group {
     this.options = options
 
     const geometry = new THREE.CircleBufferGeometry(2, 32)
-    const groundMirror = new Reflector(geometry, {
+    const groundMirror = new ReflectorPostprocessing(geometry, {
+      scene: options.reflected || webgl.scene,
+      renderer: webgl.renderer,
+      camera: webgl.camera,
+      composer: webgl.composer,
       textureWidth: webgl.width,
       textureHeight: webgl.height,
-      scene: options.reflected,
-      backgroundAlpha: 0,
       shader: {
         uniforms: {
           color: { value: null },
@@ -38,15 +40,19 @@ export class Reflection extends THREE.Group {
           varying vec4 vUvProj;
           varying vec2 vUv;
 
+          #pragma glslify: ease = require(glsl-easings/quartic-out)
+
           void main() {
             vec4 base = texture2DProj(tDiffuse, vUvProj);
 
             gl_FragColor.xyz = base.rgb;
 
+            // fade out
             vec2 center = vec2(0.5);
-            float distanceFactor = 1.5;
-            float startOpacity = 0.4;
-            gl_FragColor.a = mix(base.a * startOpacity, 0.0, distance(center, vUv) * 2.0 * distanceFactor);
+            float distanceFactor = 1.2;
+            float startOpacity = 0.8;
+            float fadeOut = ease(min(distance(center, vUv) * 2.0 * distanceFactor, 1.0));
+            gl_FragColor.a = mix(base.a * startOpacity, 0.0, fadeOut);
           }
         `,
       },

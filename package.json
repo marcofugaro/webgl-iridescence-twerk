@@ -39,6 +39,7 @@
     "datauritoblob": "^1.0.0",
     "detect-gpu": "^3.0.0",
     "glsl-blend": "^1.0.3",
+    "glsl-easings": "^1.0.0",
     "glsl-hsl2rgb": "^1.1.0",
     "glsl-hypot": "^1.0.2",
     "glsl-noise": "^0.0.0",

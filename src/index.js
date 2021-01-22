@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { BloomEffect, KernelSize, EffectPass, NoiseEffect, BlendFunction } from 'postprocessing'
 import WebGLApp from './lib/WebGLApp'
 import assets from './lib/AssetManager'
 import { Ephebe } from './scene/Ephebe'
@@ -14,7 +15,7 @@ const canvas = document.querySelector('#app')
 // setup the WebGLRenderer
 const webgl = new WebGLApp({
   canvas,
-  alpha: true,
+  backgroundAlpha: 0,
   controls: {
     ephebe: {
       powerFactor: {
@@ -53,7 +54,6 @@ const webgl = new WebGLApp({
   },
   closeControls: !window.DEBUG,
   showFps: window.DEBUG,
-  maxPixelRatio: 1,
   cameraPosition: new THREE.Vector3(0, 2, 5),
   orbitControls: {
     target: new THREE.Vector3(0, 1.2, 0),
@@ -61,6 +61,10 @@ const webgl = new WebGLApp({
     maxPolarAngle: !window.DEBUG ? Math.PI / 1.9 : Math.PI,
   },
   gamma: true,
+  antialias: false,
+  maxPixelRatio: 1,
+  postprocessing: true,
+  multisampling: 0,
 })
 
 // attach it to the window to inspect in the console
@@ -92,6 +96,22 @@ assets.load({ renderer: webgl.renderer }).then(() => {
   webgl.scene.background = assets.get(envmapKey)
 
   addLights(webgl)
+
+  const bloomEffect = new BloomEffect({
+    // blendFunction: BlendFunction.SCREEN,
+    kernelSize: KernelSize.MEDIUM,
+    luminanceThreshold: 0.2,
+    luminanceSmoothing: 0.1,
+    height: 480,
+  })
+
+  webgl.composer.addPass(new EffectPass(webgl.camera, bloomEffect))
+
+  const noiseEffect = new NoiseEffect({
+    blendFunction: BlendFunction.COLOR_DODGE,
+  })
+  noiseEffect.blendMode.opacity.value = 0.05
+  webgl.composer.addPass(new EffectPass(webgl.camera, noiseEffect))
 
   // start animation loop
   webgl.start()

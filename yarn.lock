@@ -3743,6 +3743,11 @@ glsl-blend@^1.0.3:
   resolved "https://registry.yarnpkg.com/glsl-blend/-/glsl-blend-1.0.3.tgz#0f636604f0e9e7cab647888c58ce7c79e67eef7c"
   integrity sha1-D2NmBPDp58q2R4iMWM58eeZ+73w=
 
+glsl-easings@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/glsl-easings/-/glsl-easings-1.0.0.tgz#d4f7b499915e922921f4f03d0f8089724bdf5b8e"
+  integrity sha1-1Pe0mZFekikh9PA9D4CJckvfW44=
+
 glsl-hsl2rgb@^1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/glsl-hsl2rgb/-/glsl-hsl2rgb-1.1.0.tgz#b4f53d9ebb204aa8e3c64d52dbc1659c490b0aa9"
