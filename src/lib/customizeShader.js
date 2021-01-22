@@ -1,3 +1,20 @@
+export function addDefines(material, defines) {
+  prepareOnBeforeCompile(material)
+
+  material.defines = defines
+
+  material.addBeforeCompileListener((shader) => {
+    material.defines = {
+      ...material.defines,
+      ...shader.defines,
+    }
+
+    shader.defines = material.defines
+  })
+
+  constructOnBeforeCompile(material)
+}
+
 export function addUniforms(material, uniforms) {
   prepareOnBeforeCompile(material)
 

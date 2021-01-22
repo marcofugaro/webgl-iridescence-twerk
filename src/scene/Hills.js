@@ -8,7 +8,7 @@ const SIZE = 20
 const RESOLUTION = 256
 
 const envmapKey = assets.queue({
-  url: 'assets/envs/49TH_STREET.exr',
+  url: 'assets/envMaps/49TH_STREET.exr',
   type: 'envmap',
   pmrem: true,
 })

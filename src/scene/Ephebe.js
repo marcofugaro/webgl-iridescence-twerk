@@ -12,7 +12,7 @@ const ephebeKey = assets.queue({
 // TODO check if file is duped
 // and check options
 const envmapKey = assets.queue({
-  url: 'assets/envs/49TH_STREET.exr',
+  url: 'assets/envMaps/49TH_STREET.exr',
   type: 'envmap',
   pmrem: true,
 })
@@ -108,6 +108,7 @@ export class Ephebe extends THREE.Group {
     scene.scale.multiplyScalar(0.25)
     scene.rotateY(Math.PI)
     scene.translateX(-0.1)
+    scene.translateY(0.15)
 
     this.add(scene)
   }

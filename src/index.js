@@ -3,10 +3,8 @@ import WebGLApp from './lib/WebGLApp'
 import assets from './lib/AssetManager'
 import { Ephebe } from './scene/Ephebe'
 import { Hills } from './scene/Hills'
-import { wireValue } from './lib/Controls'
+import { Reflection } from './scene/Reflection'
 import { addLights } from './scene/lights'
-import ContactShadow from './scene/ContactShadow'
-import { SoftShadowFloor } from './scene/SoftShadowFloor'
 
 window.DEBUG = window.location.search.includes('debug')
 
@@ -16,7 +14,7 @@ const canvas = document.querySelector('#app')
 // setup the WebGLRenderer
 const webgl = new WebGLApp({
   canvas,
-  backgroundAlpha: 0,
+  alpha: true,
   controls: {
     ephebe: {
       powerFactor: {
@@ -60,7 +58,7 @@ const webgl = new WebGLApp({
   orbitControls: {
     target: new THREE.Vector3(0, 1.2, 0),
     enableZoom: window.DEBUG,
-    maxPolarAngle: !window.DEBUG ? Math.PI / 2 : Math.PI,
+    maxPolarAngle: !window.DEBUG ? Math.PI / 1.9 : Math.PI,
   },
   gamma: true,
 })
@@ -74,7 +72,7 @@ if (window.DEBUG) {
 webgl.canvas.style.visibility = 'hidden'
 
 const envmapKey = assets.queue({
-  url: 'assets/envs/photo.jpg',
+  url: 'assets/envMaps/photo.jpg',
   type: 'envmap',
 })
 
@@ -88,8 +86,8 @@ assets.load({ renderer: webgl.renderer }).then(() => {
   webgl.scene.add(ephebe)
   const hills = new Hills(webgl)
   webgl.scene.add(hills)
-  // const contactShadow = new ContactShadow(webgl, { position: new THREE.Vector3(0, 0.1, 0) })
-  // webgl.scene.add(contactShadow)
+  const reflection = new Reflection(webgl, { reflected: ephebe })
+  webgl.scene.add(reflection)
 
   webgl.scene.background = assets.get(envmapKey)
 
