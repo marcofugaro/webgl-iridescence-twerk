@@ -1,5 +1,13 @@
 import * as THREE from 'three'
-import { BloomEffect, KernelSize, EffectPass, NoiseEffect, BlendFunction } from 'postprocessing'
+import {
+  BloomEffect,
+  KernelSize,
+  EffectPass,
+  SMAAImageLoader,
+  SMAAEffect,
+  BlendFunction,
+  VignetteEffect,
+} from 'postprocessing'
 import WebGLApp from './lib/WebGLApp'
 import assets from './lib/AssetManager'
 import { Ephebe } from './scene/Ephebe'
@@ -57,7 +65,6 @@ const webgl = new WebGLApp({
   cameraPosition: new THREE.Vector3(0, 2, 5),
   orbitControls: {
     target: new THREE.Vector3(0, 1.2, 0),
-    enableZoom: window.DEBUG,
     maxPolarAngle: !window.DEBUG ? Math.PI / 1.9 : Math.PI,
   },
   gamma: true,
@@ -76,7 +83,7 @@ if (window.DEBUG) {
 webgl.canvas.style.visibility = 'hidden'
 
 const envmapKey = assets.queue({
-  url: 'assets/envMaps/photo.jpg',
+  url: 'assets/envMaps/nebula.jpg',
   type: 'envmap',
 })
 
@@ -84,6 +91,14 @@ const envmapKey = assets.queue({
 assets.load({ renderer: webgl.renderer }).then(() => {
   // show canvas
   webgl.canvas.style.visibility = ''
+
+  // limit zoom
+  if (!window.DEBUG) {
+    // const currentDistance = webgl.orbitControls.getDistance()
+    // webgl.orbitControls.maxDistance = currentDistance
+    webgl.orbitControls.maxDistance = 5.05
+    webgl.orbitControls.minDistance = 1
+  }
 
   // add any "WebGL components" here...
   const ephebe = new Ephebe(webgl)
@@ -98,21 +113,25 @@ assets.load({ renderer: webgl.renderer }).then(() => {
   addLights(webgl)
 
   const bloomEffect = new BloomEffect({
-    // blendFunction: BlendFunction.SCREEN,
-    kernelSize: KernelSize.MEDIUM,
-    luminanceThreshold: 0.2,
-    luminanceSmoothing: 0.1,
+    blendFunction: BlendFunction.ADD,
+    kernelSize: KernelSize.LARGE,
+    luminanceThreshold: 0.4,
+    luminanceSmoothing: 0.15,
     height: 480,
   })
 
-  webgl.composer.addPass(new EffectPass(webgl.camera, bloomEffect))
+  // webgl.composer.addPass(new EffectPass(webgl.camera, bloomEffect))
 
-  const noiseEffect = new NoiseEffect({
-    blendFunction: BlendFunction.COLOR_DODGE,
+  const vignetteEffect = new VignetteEffect()
+
+  console.time()
+  new SMAAImageLoader().load(([search, area]) => {
+    console.timeEnd()
+    const smaaEffect = new SMAAEffect(search, area)
+    smaaEffect.edgeDetectionMaterial.setEdgeDetectionThreshold(0.01)
+    webgl.composer.addPass(new EffectPass(webgl.camera, smaaEffect, bloomEffect, vignetteEffect))
+
+    // start animation loop
+    webgl.start()
   })
-  noiseEffect.blendMode.opacity.value = 0.05
-  webgl.composer.addPass(new EffectPass(webgl.camera, noiseEffect))
-
-  // start animation loop
-  webgl.start()
 })

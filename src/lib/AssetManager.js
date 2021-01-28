@@ -165,6 +165,8 @@ class AssetManager {
         })
       case 'json':
         return fetch(url).then((response) => response.json())
+      case 'envmap':
+      case 'envMap':
       case 'env-map':
         return loadEnvMap(url, { renderer, ...options })
       case 'svg':

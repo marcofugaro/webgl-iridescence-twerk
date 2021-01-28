@@ -32,6 +32,9 @@ export class Ephebe extends THREE.Group {
       }
     })
 
+    // do not make it disappear when camera is close
+    this.ephebe.frustumCulled = false
+
     this.mixer = new THREE.AnimationMixer(scene)
     const clip = gltf.animations[0].clone()
     this.mixer.clipAction(clip).play()
