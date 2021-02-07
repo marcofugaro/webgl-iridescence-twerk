@@ -19,7 +19,7 @@ export class Hills extends THREE.Group {
     this.webgl = webgl
     this.options = options
 
-    this.material = new THREE.MeshPhysicalMaterial({
+    this.material = new THREE.MeshStandardMaterial({
       roughness: 0.2,
       metalness: 1,
       envMap: assets.get(envmapKey),
@@ -76,7 +76,6 @@ export class Hills extends THREE.Group {
           // distance from center
           float distance = hypot(point.xz);
 
-          // float amplitude = pow(distance, 3.0) * 0.01;
           float amplitude = pow(distance, 2.0) * 0.05;
 
           return (noise(vec3(point.xz * frequency, timeFixed * speed)) * 0.5 + 0.5) * amplitude;
