@@ -5,9 +5,9 @@ import { wireUniform } from '../lib/Controls'
 import { addUniforms, customizeVertexShader, customizeFragmentShader } from '../lib/customizeShader'
 
 const ephebeKey = assets.queue({
-  url: 'assets/ephebe_twerking_draco.glb',
+  url: 'assets/ephebe_twerking.glb',
   type: 'gltf',
-  draco: true,
+  // draco: true,
 })
 
 const envmapKey = assets.queue({
