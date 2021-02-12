@@ -1,19 +1,11 @@
 import * as THREE from 'three'
-import {
-  BloomEffect,
-  KernelSize,
-  EffectPass,
-  SMAAImageLoader,
-  SMAAEffect,
-  BlendFunction,
-  VignetteEffect,
-} from 'postprocessing'
+import { BloomEffect, KernelSize, EffectPass, BlendFunction, VignetteEffect } from 'postprocessing'
 import WebGLApp from './lib/WebGLApp'
 import assets from './lib/AssetManager'
 import { Ephebe } from './scene/Ephebe'
 import { Hills } from './scene/Hills'
 import { Reflection } from './scene/Reflection'
-import { addLights } from './scene/lights'
+import { SMAAEffect } from './lib/SMAAEffect'
 
 window.DEBUG = window.location.search.includes('debug')
 
@@ -65,7 +57,7 @@ const webgl = new WebGLApp({
   cameraPosition: new THREE.Vector3(0, 2, 5),
   orbitControls: {
     target: new THREE.Vector3(0, 1.2, 0),
-    maxPolarAngle: !window.DEBUG ? Math.PI / 1.9 : Math.PI,
+    maxPolarAngle: !window.DEBUG ? Math.PI / 1.94 : Math.PI,
   },
   gamma: true,
   antialias: false,
@@ -79,21 +71,16 @@ if (window.DEBUG) {
   window.webgl = webgl
 }
 
-// hide canvas
-webgl.canvas.style.visibility = 'hidden'
-
 const envmapKey = assets.queue({
   url: 'assets/envMaps/nebula.jpg',
   type: 'envmap',
 })
 
 // load any queued assets
-assets.load({ renderer: webgl.renderer }).then(() => {
-  // show canvas
-  webgl.canvas.style.visibility = ''
-
+assets.load({ renderer: webgl.renderer }).then(async () => {
   // limit zoom
   if (!window.DEBUG) {
+    // ideally..
     // const currentDistance = webgl.orbitControls.getDistance()
     // webgl.orbitControls.maxDistance = currentDistance
     webgl.orbitControls.maxDistance = 5.05
@@ -108,10 +95,10 @@ assets.load({ renderer: webgl.renderer }).then(() => {
   const reflection = new Reflection(webgl, { reflected: ephebe })
   webgl.scene.add(reflection)
 
+  // scene background
   webgl.scene.background = assets.get(envmapKey)
 
-  addLights(webgl)
-
+  // postprocessing
   const bloomEffect = new BloomEffect({
     blendFunction: BlendFunction.ADD,
     kernelSize: KernelSize.LARGE,
@@ -120,18 +107,12 @@ assets.load({ renderer: webgl.renderer }).then(() => {
     height: 480,
   })
 
-  // webgl.composer.addPass(new EffectPass(webgl.camera, bloomEffect))
-
   const vignetteEffect = new VignetteEffect()
 
-  console.time()
-  new SMAAImageLoader().load(([search, area]) => {
-    console.timeEnd()
-    const smaaEffect = new SMAAEffect(search, area)
-    smaaEffect.edgeDetectionMaterial.setEdgeDetectionThreshold(0.01)
-    webgl.composer.addPass(new EffectPass(webgl.camera, smaaEffect, bloomEffect, vignetteEffect))
+  const smaaEffect = await SMAAEffect()
 
-    // start animation loop
-    webgl.start()
-  })
+  webgl.composer.addPass(new EffectPass(webgl.camera, smaaEffect, bloomEffect, vignetteEffect))
+
+  // start animation loop
+  webgl.start()
 })

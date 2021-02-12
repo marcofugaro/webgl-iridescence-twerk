@@ -5,12 +5,11 @@ import { wireUniform } from '../lib/Controls'
 import { addUniforms, customizeVertexShader, customizeFragmentShader } from '../lib/customizeShader'
 
 const ephebeKey = assets.queue({
-  url: 'assets/ephebe_twerking.glb',
+  url: 'assets/ephebe_twerking_draco.glb',
   type: 'gltf',
+  draco: true,
 })
 
-// TODO check if file is duped
-// and check options
 const envmapKey = assets.queue({
   url: 'assets/envMaps/49TH_STREET.exr',
   type: 'envmap',
