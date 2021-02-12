@@ -93,7 +93,8 @@ class AssetManager {
       if (window.DEBUG) {
         console.log(
           `📦 Loaded single asset %c${item.url}%c in ${prettyMs(
-            performance.now() - itemLoadingStart
+            performance.now() - itemLoadingStart,
+            { secondsDecimalDigits: 3 }
           )}`,
           'color:blue',
           'color:black'
@@ -139,7 +140,9 @@ class AssetManager {
 
           if (window.DEBUG) {
             this.log(
-              `Loaded %c${item.url}%c in ${prettyMs(performance.now() - itemLoadingStart)}`,
+              `Loaded %c${item.url}%c in ${prettyMs(performance.now() - itemLoadingStart, {
+                secondsDecimalDigits: 3,
+              })}`,
               'color:blue',
               'color:black'
             )
@@ -158,7 +161,11 @@ class AssetManager {
       const errors = this.#logs.filter((log) => log.type === 'error')
 
       if (errors.length === 0) {
-        this.groupLog(`📦 Assets loaded in ${prettyMs(performance.now() - loadingStart)} ⏱`)
+        this.groupLog(
+          `📦 Assets loaded in ${prettyMs(performance.now() - loadingStart, {
+            secondsDecimalDigits: 3,
+          })} ⏱`
+        )
       } else {
         this.groupLog(
           `📦 %c Could not load ${errors.length} asset${errors.length > 1 ? 's' : ''} `,

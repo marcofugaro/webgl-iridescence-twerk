@@ -135,7 +135,7 @@ module.exports = merge.smart(
             return
           }
 
-          const time = prettyMs(stats.endTime - stats.startTime)
+          const time = prettyMs(stats.endTime - stats.startTime, { secondsDecimalDigits: 3 })
           console.clear()
           console.log(chalk.green(`✅  Compiled successfully in ${chalk.cyan(time)}`))
           console.log()

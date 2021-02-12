@@ -72,7 +72,7 @@ if (window.DEBUG) {
 }
 
 const envmapKey = assets.queue({
-  url: 'assets/envMaps/nebula.jpg',
+  url: 'assets/envMaps/nebula_optimized.jpg',
   type: 'envmap',
 })
 
