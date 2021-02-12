@@ -7,7 +7,6 @@ import { addUniforms, customizeVertexShader, customizeFragmentShader } from '../
 const ephebeKey = assets.queue({
   url: 'assets/ephebe_twerking.glb',
   type: 'gltf',
-  // draco: true,
 })
 
 const envmapKey = assets.queue({
