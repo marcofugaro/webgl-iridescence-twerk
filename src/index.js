@@ -84,7 +84,7 @@ assets.load({ renderer: webgl.renderer }).then(async () => {
   if (!window.DEBUG) {
     const DOLLY_DELAY = 1
     const DOLLY_DURATION = 3
-    const MIN_DISTANCE = 1
+    const MIN_DISTANCE = 0.7
     const MAX_DISTANCE = 5.05
     const ROTATE_SPEED = 2
     const ROTATE_SPEED_SLOW = 0.6
