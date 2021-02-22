@@ -1,3 +1,6 @@
 {
-  "extends": "eslint-config-accurapp"
+  "extends": "eslint-config-accurapp",
+  "rules": {
+    "promise/no-nesting": "off"
+  }
 }

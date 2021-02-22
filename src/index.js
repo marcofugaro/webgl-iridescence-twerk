@@ -7,7 +7,10 @@ import assets from './lib/AssetManager'
 import { Ephebe } from './scene/Ephebe'
 import { Hills } from './scene/Hills'
 import { Reflection } from './scene/Reflection'
+import { XRState } from './lib/XRState'
 import { SMAAEffect } from './lib/SMAAEffect'
+import { isARSupported, requestARSession } from './lib/xr-utils'
+import ContactShadow from './lib/ContactShadow'
 
 window.DEBUG = window.location.search.includes('debug')
 
@@ -61,6 +64,7 @@ const webgl = new WebGLApp({
     target: new THREE.Vector3(0, 1.2, 0),
     maxPolarAngle: !window.DEBUG ? Math.PI / 1.94 : Math.PI,
   },
+  xr: true,
   gamma: true,
   antialias: false,
   maxPixelRatio: 1,
@@ -81,15 +85,14 @@ const envmapKey = assets.queue({
 // load any queued assets
 assets.load({ renderer: webgl.renderer }).then(async () => {
   // limit zoom
+  const DOLLY_DELAY = 1
+  const DOLLY_DURATION = 3
+  const MIN_DISTANCE = 0.7
+  const MAX_DISTANCE = 5.05
+  const ROTATE_SPEED = 2
+  const ROTATE_SPEED_SLOW = 0.6
+  const SLOW_DOWN_DURATION = 2
   if (!window.DEBUG) {
-    const DOLLY_DELAY = 1
-    const DOLLY_DURATION = 3
-    const MIN_DISTANCE = 0.7
-    const MAX_DISTANCE = 5.05
-    const ROTATE_SPEED = 2
-    const ROTATE_SPEED_SLOW = 0.6
-    const SLOW_DOWN_DURATION = 2
-
     webgl.orbitControls.autoRotate = true
     webgl.orbitControls.autoRotateSpeed = -ROTATE_SPEED
 
@@ -139,7 +142,7 @@ assets.load({ renderer: webgl.renderer }).then(async () => {
   }
 
   // add any "WebGL components" here...
-  const ephebe = new Ephebe(webgl)
+  const ephebe = Ephebe(webgl)
   webgl.scene.add(ephebe)
   const hills = new Hills(webgl)
   webgl.scene.add(hills)
@@ -166,4 +169,115 @@ assets.load({ renderer: webgl.renderer }).then(async () => {
 
   // start animation loop
   webgl.start()
+
+  // enable webxr
+  isARSupported(webgl.renderer.xr).then((isSupported) => {
+    if (!isSupported) {
+      return
+    }
+
+    const EPHEBE_XR_SCALE = 0.1
+
+    const button = document.querySelector('#ar-button')
+    const ui = document.querySelector('#ar-ui')
+    const closeButton = ui.querySelector('#ar-close-button')
+
+    const mainScene = webgl.scene
+    const xrScene = new THREE.Scene()
+
+    const xrstate = new XRState(webgl)
+    xrScene.add(xrstate)
+
+    const shadow = new ContactShadow(webgl, {
+      object: ephebe,
+      resolution: 256,
+      width: 2.6 * EPHEBE_XR_SCALE,
+      height: 2.6 * EPHEBE_XR_SCALE,
+      depth: 0.3 * EPHEBE_XR_SCALE,
+    })
+
+    // reveal the button after the camera transition
+    button.style.display = 'block'
+    if (window.DEBUG) {
+      button.style.opacity = 1
+    } else {
+      setTimeout(() => {
+        button.style.opacity = 1
+      }, (webgl.time + DOLLY_DELAY + DOLLY_DURATION) * 1000)
+    }
+
+    // add the debug panel also in AR
+    if (window.DEBUG) {
+      ui.appendChild(webgl.stats.dom)
+      // move them down a bit,
+      // some phones have round corners
+      const fpsCanvases = [...webgl.stats.dom.children]
+      fpsCanvases.forEach((fpsCanvas) => {
+        fpsCanvas.style.top = '1rem'
+      })
+    }
+
+    button.addEventListener('click', () => {
+      requestARSession(webgl.renderer.xr)
+        .then((session) => {
+          webgl.scene = xrScene
+          webgl.orbitControls.enabled = false
+          const cameraPosition = webgl.camera.position.clone()
+          const ephebePosition = ephebe.position.clone()
+          const ephebeScale = ephebe.scale.clone()
+
+          ui.style.display = 'block'
+
+          // add ephebe on first hit test
+          xrstate.onFirstHit(() => {
+            mainScene.remove(ephebe)
+            xrScene.add(ephebe)
+            ephebe.position.copy(xrstate.reticle.position)
+            ephebe.scale.multiplyScalar(EPHEBE_XR_SCALE)
+
+            xrScene.add(shadow)
+            if (window.DEBUG) {
+              xrScene.add(shadow.cameraHelper)
+            }
+            shadow.position.copy(xrstate.reticle.position)
+          })
+
+          // set ephebe position on click
+          xrstate.onARPointerDown(() => {
+            if (!xrstate.isHitting) {
+              return
+            }
+
+            ephebe.position.copy(xrstate.reticle.position)
+            shadow.position.copy(xrstate.reticle.position)
+          })
+
+          closeButton.addEventListener('click', () => session.end(), { once: true })
+          session.addEventListener('end', () => {
+            // TODO test multiple re-enters
+            webgl.scene = mainScene
+            webgl.orbitControls.enabled = true
+            webgl.camera.position.copy(cameraPosition)
+
+            xrstate.reset()
+
+            ui.style.display = 'none'
+
+            xrScene.remove(ephebe)
+            mainScene.add(ephebe)
+            ephebe.position.copy(ephebePosition)
+            ephebe.scale.copy(ephebeScale)
+
+            xrScene.remove(shadow)
+            if (window.DEBUG) {
+              xrScene.remove(shadow.cameraHelper)
+            }
+          })
+        })
+        .catch(() => {
+          // the user declined the popup!
+          // do nothing
+        })
+    })
+  })
 })
