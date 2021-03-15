@@ -58,7 +58,7 @@ export class Hills extends THREE.Group {
       head: glsl`
         uniform float timeFixed;
 
-        out vec3 vPosition;
+        out vec3 vTransformed;
 
         #pragma glslify: noise = require(glsl-noise/simplex/3d)
         #pragma glslify: hypot = require(glsl-hypot)
@@ -101,7 +101,7 @@ export class Hills extends THREE.Group {
       `,
       transformed: glsl`
         transformed = displacedPosition;
-        vPosition = transformed;
+        vTransformed = vec3(modelMatrix * vec4(transformed, 1.0));
       `,
       objectNormal: glsl`
         objectNormal = displacedNormal;
@@ -120,13 +120,10 @@ export class Hills extends THREE.Group {
         uniform vec3 firstColor;
         uniform vec3 secondColor;
 
-        in vec3 vPosition;
+        in vec3 vTransformed;
       `,
       main: glsl`
-        // The camera sometimes would be too close to the position,
-        // so the vector would point to the negative position.
-        // Multiplicating the camera position by a big number fixes it.
-        vec3 cameraDirection = normalize(cameraPosition * 1000.0 - vPosition);
+        vec3 cameraDirection = normalize(cameraPosition - vTransformed);
 
         // 1 when facing the camera, 0 when perpendicular
         float fresnel = dot(vNormal, cameraDirection);
