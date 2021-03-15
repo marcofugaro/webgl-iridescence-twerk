@@ -3,3 +3,27 @@ canvas {
   top: 0;
   left: 0;
 }
+
+#ar-ui {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+#ar-close-button {
+  pointer-events: auto;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
+#ar-button {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  transition: opacity 0.5s ease;
+}
