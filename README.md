@@ -2,6 +2,8 @@
 
 > Some cool ass iridescent effect
 
+![](.github/screenshots/demo.png)
+
 Built with [threejs-modern-app](https://github.com/marcofugaro/threejs-modern-app).
 
 ## Highlights
